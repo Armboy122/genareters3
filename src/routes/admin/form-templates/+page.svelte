@@ -1,0 +1,234 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+
+	let templates: any[] = [];
+	let loading = true;
+	let showModal = false;
+	let editingTemplate: any = null;
+	let saving = false;
+	let errorMessage = '';
+	let formName = '';
+	let formDescription = '';
+
+	async function loadTemplates() {
+		loading = true;
+		const res = await fetch('/api/admin/form-templates');
+		const data = await res.json();
+		if (data.success) templates = data.data;
+		loading = false;
+	}
+
+	onMount(() => { loadTemplates(); });
+
+	function openCreate() {
+		editingTemplate = null;
+		formName = '';
+		formDescription = '';
+		errorMessage = '';
+		showModal = true;
+	}
+
+	function openEdit(tmpl: any) {
+		editingTemplate = tmpl;
+		formName = tmpl.name;
+		formDescription = tmpl.description || '';
+		errorMessage = '';
+		showModal = true;
+	}
+
+	async function handleSave() {
+		if (!formName.trim()) {
+			errorMessage = 'กรุณาระบุชื่อแบบฟอร์ม';
+			return;
+		}
+		saving = true;
+		errorMessage = '';
+
+		const method = editingTemplate ? 'PUT' : 'POST';
+		const body = editingTemplate
+			? { id: editingTemplate.id, name: formName, description: formDescription }
+			: { name: formName, description: formDescription };
+
+		const res = await fetch('/api/admin/form-templates', {
+			method,
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body)
+		});
+
+		const data = await res.json();
+		saving = false;
+
+		if (data.success) {
+			showModal = false;
+			loadTemplates();
+		} else {
+			errorMessage = data.message || 'เกิดข้อผิดพลาด';
+		}
+	}
+
+	async function toggleActive(tmpl: any) {
+		const newStatus = !tmpl.isActive;
+		if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานแบบฟอร์ม "${tmpl.name}" ?`)) return;
+
+		await fetch('/api/admin/form-templates', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id: tmpl.id, isActive: newStatus })
+		});
+		loadTemplates();
+	}
+
+	async function duplicateTemplate(tmpl: any) {
+		if (!confirm(`ทำสำเนาแบบฟอร์ม "${tmpl.name}" ?`)) return;
+
+		// Create new template
+		const createRes = await fetch('/api/admin/form-templates', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: `${tmpl.name} (สำเนา)`, description: tmpl.description })
+		});
+		const createData = await createRes.json();
+		if (!createData.success) {
+			alert('ไม่สามารถทำสำเนาได้');
+			return;
+		}
+
+		// Copy items
+		const itemsRes = await fetch(`/api/admin/form-templates/items?formTemplateId=${tmpl.id}`);
+		const itemsData = await itemsRes.json();
+		if (itemsData.success && itemsData.data.length > 0) {
+			for (const item of itemsData.data) {
+				await fetch('/api/admin/form-templates/items', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						formTemplateId: createData.data.id,
+						itemCode: item.itemCode,
+						category: item.category,
+						description: item.description,
+						isDisposalCriteria: item.isDisposalCriteria,
+						sortOrder: item.sortOrder
+					})
+				});
+			}
+		}
+
+		loadTemplates();
+	}
+</script>
+
+<div>
+	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+		<div>
+			<h1 class="text-2xl font-bold text-gray-900">จัดการแบบฟอร์มตรวจสอบ</h1>
+			<p class="text-gray-500 text-sm mt-1">สร้าง แก้ไข หรือทำสำเนาแบบฟอร์ม</p>
+		</div>
+		<button
+			on:click={openCreate}
+			class="px-4 py-2.5 gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium relative z-10"
+		>
+			+ สร้างแบบฟอร์มใหม่
+		</button>
+	</div>
+
+	<!-- Templates Grid -->
+	{#if loading}
+		<div class="p-12 text-center text-gray-400">กำลังโหลด...</div>
+	{:else if templates.length === 0}
+		<div class="p-12 text-center text-gray-400">ยังไม่มีแบบฟอร์ม</div>
+	{:else}
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+			{#each templates as tmpl}
+				<div class="bg-white rounded-xl border border-gray-100 p-5 {tmpl.isActive ? '' : 'opacity-60'}">
+					<div class="flex items-start justify-between mb-3">
+						<div>
+							<h3 class="font-semibold text-gray-800">{tmpl.name}</h3>
+							{#if tmpl.description}
+								<p class="text-xs text-gray-500 mt-0.5">{tmpl.description}</p>
+							{/if}
+						</div>
+						<span class="px-2 py-0.5 rounded-full text-xs {tmpl.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
+							{tmpl.isActive ? 'ใช้งาน' : 'ปิด'}
+						</span>
+					</div>
+
+					<div class="flex gap-4 text-sm text-gray-600 mb-4">
+						<div>
+							<span class="text-gray-400">หัวข้อตรวจ:</span>
+							<span class="font-medium">{tmpl.itemCount}</span>
+						</div>
+						<div>
+							<span class="text-gray-400">เครื่องที่ใช้:</span>
+							<span class="font-medium">{tmpl.generatorCount}</span>
+						</div>
+					</div>
+
+					<div class="flex gap-2 flex-wrap">
+						<a
+							href="/admin/form-templates/{tmpl.id}/edit"
+							class="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+						>
+							📝 แก้ไขหัวข้อ
+						</a>
+						<button
+							on:click={() => openEdit(tmpl)}
+							class="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
+						>
+							แก้ไขชื่อ
+						</button>
+						<button
+							on:click={() => duplicateTemplate(tmpl)}
+							class="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
+						>
+							ทำสำเนา
+						</button>
+						<button
+							on:click={() => toggleActive(tmpl)}
+							class="px-3 py-1.5 text-xs rounded-lg transition-colors
+							{tmpl.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}"
+						>
+							{tmpl.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+						</button>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
+</div>
+
+<!-- Modal -->
+{#if showModal}
+	<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+		<div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+			<div class="px-6 py-4 border-b border-gray-100">
+				<h3 class="text-lg font-semibold text-gray-800">
+					{editingTemplate ? 'แก้ไขแบบฟอร์ม' : 'สร้างแบบฟอร์มใหม่'}
+				</h3>
+			</div>
+			<div class="p-6 space-y-4">
+				{#if errorMessage}
+					<div class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{errorMessage}</div>
+				{/if}
+				<div>
+					<label for="tmpl-name" class="block text-sm font-medium text-gray-700 mb-1">ชื่อแบบฟอร์ม *</label>
+					<input id="tmpl-name" type="text" bind:value={formName} placeholder="เช่น แบบฟอร์ม 1"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
+				</div>
+				<div>
+					<label for="tmpl-desc" class="block text-sm font-medium text-gray-700 mb-1">คำอธิบาย</label>
+					<textarea id="tmpl-desc" bind:value={formDescription} placeholder="คำอธิบายเพิ่มเติม..." rows="3"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light"></textarea>
+				</div>
+			</div>
+			<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
+				<button on:click={() => (showModal = false)} class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+					ยกเลิก
+				</button>
+				<button on:click={handleSave} disabled={saving}
+					class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10">
+					{saving ? 'กำลังบันทึก...' : 'บันทึก'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

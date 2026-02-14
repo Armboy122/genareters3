@@ -1,15 +1,28 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	$: ({ summary, departments, month, year, monthName } = $page.data);
+	$: ({ summary, departments, machineStats, month, year, monthName } = $page.data);
 </script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen">
 	<!-- Header -->
 	<header class="gradient-bg text-white shadow-lg">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-			<h1 class="text-3xl font-bold">ระบบตรวจสภาพเครื่องกำเนิดไฟฟ้า</h1>
-			<p class="text-purple-100 mt-1">การไฟฟ้าส่วนภูมิภาค (กฟภ.)</p>
+		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 relative z-10">
+			<div class="flex items-center gap-3">
+				<div class="w-10 h-10 rounded-lg bg-amber-400/20 flex items-center justify-center">
+					<span class="text-amber-300 text-xl">⚡</span>
+				</div>
+				<div>
+					<h1 class="text-3xl font-bold tracking-tight">ระบบตรวจสภาพเครื่องกำเนิดไฟฟ้า</h1>
+					<p class="text-blue-200/70 mt-0.5 text-sm">การไฟฟ้าส่วนภูมิภาค (กฟภ.)</p>
+				</div>
+			</div>
+			<a
+				href="/admin"
+				class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm text-blue-100 relative z-10"
+			>
+				⚙️ Admin Panel
+			</a>
 		</div>
 	</header>
 
@@ -42,9 +55,9 @@
 		<div class="mb-8 rounded-xl bg-white p-6 shadow-md">
 			<h3 class="text-xl font-semibold text-gray-800 mb-4">สถิติการตรวจทั้งหมด</h3>
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-				<div class="text-center p-4 bg-purple-50 rounded-lg">
+				<div class="text-center p-4 bg-slate-50 rounded-lg border border-slate-100">
 					<p class="text-sm text-gray-600 mb-1">เครื่องทั้งหมด</p>
-					<p class="text-3xl font-bold text-purple-700">{summary.totalGenerators}</p>
+					<p class="text-3xl font-bold text-slate-700">{summary.totalGenerators}</p>
 				</div>
 				<div class="text-center p-4 bg-green-50 rounded-lg">
 					<p class="text-sm text-gray-600 mb-1">ตรวจแล้ว</p>
@@ -63,13 +76,46 @@
 								style="width: {summary.progress}%"
 							></div>
 						</div>
-						<span class="text-2xl font-bold text-purple-700">{summary.progress}%</span>
+						<span class="text-2xl font-bold text-slate-700">{summary.progress}%</span>
 					</div>
 				</div>
 			</div>
 		</div>
 
+		<!-- Machine Status Breakdown -->
+		{#if summary.totalInspected > 0}
+			<div class="mb-8 rounded-xl bg-white p-6 shadow-md">
+				<h3 class="text-xl font-semibold text-gray-800 mb-4">สถานะเครื่องจากผลการตรวจ</h3>
+				<div class="grid grid-cols-3 gap-4">
+					<div class="text-center p-4 bg-green-50 rounded-lg border border-green-100">
+						<div class="text-3xl mb-1">✅</div>
+						<p class="text-2xl font-bold text-green-700">{machineStats.working}</p>
+						<p class="text-xs text-gray-600 mt-1">ใช้งานได้</p>
+					</div>
+					<div class="text-center p-4 bg-amber-50 rounded-lg border border-amber-100">
+						<div class="text-3xl mb-1">🔧</div>
+						<p class="text-2xl font-bold text-amber-700">{machineStats.repair}</p>
+						<p class="text-xs text-gray-600 mt-1">ซ่อมแซม</p>
+					</div>
+					<div class="text-center p-4 bg-red-50 rounded-lg border border-red-100">
+						<div class="text-3xl mb-1">⛔</div>
+						<p class="text-2xl font-bold text-red-700">{machineStats.disposal}</p>
+						<p class="text-xs text-gray-600 mt-1">รอจำหน่าย</p>
+					</div>
+				</div>
+				{#if machineStats.repair > 0 || machineStats.disposal > 0}
+					<div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+						⚠️ มีเครื่องที่ต้องดำเนินการ {machineStats.repair + machineStats.disposal} เครื่อง — กรุณาตรวจสอบและติดตามผล
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Departments List -->
+		<div class="mb-4">
+			<h3 class="text-xl font-semibold text-gray-800">สังกัดทั้งหมด</h3>
+			<p class="text-sm text-gray-500">กดที่สังกัดเพื่อดูรายละเอียดและเริ่มตรวจ</p>
+		</div>
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 			{#each departments as dept}
 				<a
@@ -104,7 +150,7 @@
 						<div class="mt-4">
 							<div class="flex justify-between text-sm mb-1">
 								<span class="text-gray-600">ความคืบหน้า</span>
-								<span class="font-semibold text-purple-700">{dept.progress}%</span>
+								<span class="font-semibold text-slate-700">{dept.progress}%</span>
 							</div>
 							<div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
 								<div

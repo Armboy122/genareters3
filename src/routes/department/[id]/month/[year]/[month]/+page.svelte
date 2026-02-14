@@ -5,14 +5,14 @@
 	$: ({ department, generators, inspectedCount, uninspectedCount, monthName, year } = $page.data);
 </script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen">
 	<!-- Header -->
 	<header class="gradient-bg text-white shadow-lg">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 relative z-10">
 			<div class="flex items-center justify-between">
 				<div>
-					<h1 class="text-2xl font-bold">{department.name}</h1>
-					<p class="text-purple-100 text-sm">เดือน {monthName} {year}</p>
+					<h1 class="text-2xl font-bold tracking-tight">{department.name}</h1>
+					<p class="text-blue-200/70 text-sm">เดือน {monthName} {year}</p>
 				</div>
 				<a
 					href="/department/{department.id}/calendar"
@@ -83,7 +83,7 @@
 
 						<div class="mb-2">
 							<p class="text-gray-600">แบบฟอร์ม</p>
-							<p class="font-semibold text-purple-700">{generator.templateName}</p>
+							<p class="font-semibold text-slate-700">{generator.templateName}</p>
 						</div>
 
 						{#if generator.isInspected}

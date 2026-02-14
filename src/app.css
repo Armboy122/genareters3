@@ -1,21 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 
 @theme {
-	--color-primary: #667eea;
-	--color-primary-dark: #764ba2;
-	--color-primary-light: #a78bfa;
+	--color-primary: #1e3a5f;
+	--color-primary-dark: #0f2440;
+	--color-primary-light: #3b6ea5;
+	--color-accent: #f59e0b;
+	--color-accent-light: #fbbf24;
+	--color-surface: #f8fafc;
+	--color-surface-elevated: #ffffff;
+	--font-sans: 'IBM Plex Sans Thai', 'system-ui', sans-serif;
+	--font-mono: 'JetBrains Mono', monospace;
 }
 
 :root {
-	--primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	--primary-gradient: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 50%, #1e3a5f 100%);
+	--header-gradient: linear-gradient(135deg, #0f2440 0%, #1e3a5f 40%, #2d5a8e 100%);
+	--card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+	--card-shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+}
+
+* {
+	font-family: 'IBM Plex Sans Thai', 'system-ui', sans-serif;
 }
 
 body {
-	@apply bg-gray-50 text-gray-900;
+	@apply text-gray-900;
+	background: #f1f5f9;
+	background-image: 
+		radial-gradient(ellipse at 0% 0%, rgba(30, 58, 95, 0.03) 0%, transparent 50%),
+		radial-gradient(ellipse at 100% 100%, rgba(245, 158, 11, 0.02) 0%, transparent 50%);
+	min-height: 100vh;
 }
 
 .gradient-bg {
-	background: var(--primary-gradient);
+	background: var(--header-gradient);
+	position: relative;
+}
+
+.gradient-bg::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(
+		90deg,
+		transparent,
+		transparent 40px,
+		rgba(255,255,255,0.015) 40px,
+		rgba(255,255,255,0.015) 41px
+	);
+	pointer-events: none;
 }
 
 .gradient-text {
@@ -23,4 +57,59 @@ body {
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
+}
+
+/* Card enhancements */
+.bg-white {
+	box-shadow: var(--card-shadow);
+	transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+a.block.bg-white:hover,
+a.block:hover .bg-white {
+	box-shadow: var(--card-shadow-hover);
+	transform: translateY(-1px);
+}
+
+/* Progress bar shimmer */
+.gradient-bg.transition-all {
+	background: linear-gradient(90deg, #1e3a5f, #3b6ea5, #1e3a5f);
+	background-size: 200% 100%;
+	animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+	0%, 100% { background-position: 0% 50%; }
+	50% { background-position: 100% 50%; }
+}
+
+/* Badge refinements */
+.rounded-full {
+	font-weight: 500;
+	letter-spacing: 0.01em;
+}
+
+/* Input focus states */
+input:focus, textarea:focus, select:focus {
+	box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.12);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 6px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+/* Mono font for codes */
+.font-mono {
+	font-family: 'JetBrains Mono', monospace;
 }

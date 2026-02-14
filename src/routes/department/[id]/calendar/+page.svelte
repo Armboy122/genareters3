@@ -4,14 +4,14 @@
 	$: ({ department, year, calendar } = $page.data);
 </script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen">
 	<!-- Header -->
 	<header class="gradient-bg text-white shadow-lg">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 relative z-10">
 			<div class="flex items-center justify-between">
 				<div>
-					<h1 class="text-2xl font-bold">{department.name}</h1>
-					<p class="text-purple-100 text-sm">สถิติการตรวจรายเดือน</p>
+					<h1 class="text-2xl font-bold tracking-tight">{department.name}</h1>
+					<p class="text-blue-200/70 text-sm">สถิติการตรวจรายเดือน</p>
 				</div>
 				<a
 					href="/dashboard"

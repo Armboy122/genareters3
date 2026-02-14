@@ -49,6 +49,22 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 
 	const progress = totalGenerators > 0 ? Math.round((totalInspected / totalGenerators) * 100) : 0;
 
+	// Machine status breakdown for current month
+	const statusBreakdown = await db
+		.select({
+			machineStatus: inspections.machineStatus,
+			count: sql<number>`count(*)::int`
+		})
+		.from(inspections)
+		.where(and(eq(inspections.month, month), eq(inspections.year, year)))
+		.groupBy(inspections.machineStatus);
+
+	const machineStats = {
+		working: statusBreakdown.find((s) => s.machineStatus === 'ใช้งานได้')?.count || 0,
+		repair: statusBreakdown.find((s) => s.machineStatus === 'ซ่อมแซม')?.count || 0,
+		disposal: statusBreakdown.find((s) => s.machineStatus === 'รอจำหน่าย')?.count || 0
+	};
+
 	return {
 		departments: departmentsWithStats.map((dept) => ({
 			...dept,
@@ -68,6 +84,7 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			totalRemaining: totalGenerators - totalInspected,
 			progress
 		},
+		machineStats,
 		month,
 		year,
 		monthName: getThaiMonthName(month)

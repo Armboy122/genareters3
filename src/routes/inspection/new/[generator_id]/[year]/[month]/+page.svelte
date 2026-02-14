@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
-	$: ({ generator, formTemplate, groupedItems, existingInspection, year, month } = $page.data);
+	$: ({ generator, formTemplate, groupedItems, existingInspection, previousMonthInspection, year, month } = $page.data);
 
 	let formData = {
 		inspectorName: '',
@@ -13,8 +13,9 @@
 	let errorMessage = '';
 	let isSubmitting = false;
 	let initialized = false;
+	let usedPreviousMonth = false;
 
-	// Initialize form data once from existing inspection or default to "ปกติ"
+	// Initialize form data once from existing inspection, previous month, or default to "ปกติ"
 	$: if (!initialized && (existingInspection || groupedItems)) {
 		initialized = true;
 		if (existingInspection) {
@@ -37,12 +38,26 @@
 				};
 			}
 		} else if (groupedItems) {
+			// First set defaults for all template items
 			for (const category in groupedItems) {
 				for (const item of groupedItems[category]) {
 					formData.items[item.itemCode] = {
 						status: 'ปกติ',
 						remark: ''
 					};
+				}
+			}
+			// If previous month inspection exists, pre-fill from it
+			if (previousMonthInspection) {
+				usedPreviousMonth = true;
+				formData.inspectorName = previousMonthInspection.inspectorName;
+				for (const detail of previousMonthInspection.details) {
+					if (formData.items[detail.itemCode]) {
+						formData.items[detail.itemCode] = {
+							status: detail.status,
+							remark: detail.remark || ''
+						};
+					}
 				}
 			}
 		}
@@ -134,16 +149,16 @@
 	}
 </script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen">
 	<!-- Header -->
 	<header class="gradient-bg text-white shadow-lg">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 relative z-10">
 			<div class="flex items-center justify-between">
 				<div>
-					<h1 class="text-2xl font-bold">
+					<h1 class="text-2xl font-bold tracking-tight">
 						{existingInspection ? 'แก้ไขข้อมูลการตรวจ' : 'บันทึกข้อมูลการตรวจ'}
 					</h1>
-					<p class="text-purple-100 text-sm">
+					<p class="text-blue-200/70 text-sm">
 						{generator.assetId} | {generator.type} | {generator.sizeKw} kW | {generator.product || '-'}
 					</p>
 				</div>
@@ -158,6 +173,17 @@
 	</header>
 
 	<main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+		<!-- Previous Month Pre-fill Notice -->
+		{#if usedPreviousMonth}
+			<div class="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg flex items-center gap-3">
+				<span class="text-xl">📋</span>
+				<div>
+					<p class="font-semibold">ดึงข้อมูลจากเดือนที่แล้วมาแล้ว</p>
+					<p class="text-sm">ข้อมูลการตรวจถูกดึงมาจากประวัติเดือนก่อนหน้า กรุณาตรวจสอบและแก้ไขก่อนบันทึก</p>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Error Message -->
 		{#if errorMessage}
 			<div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
@@ -174,7 +200,7 @@
 				type="text"
 				id="inspectorName"
 				bind:value={formData.inspectorName}
-				class="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+				class="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
 				placeholder="ระบุชื่อผู้ตรวจ"
 			/>
 		</div>
@@ -200,12 +226,12 @@
 		<!-- Inspection Items -->
 		{#each Object.keys(groupedItems) as category}
 			<div class="mb-6 bg-white rounded-xl shadow-md p-6">
-				<h2 class="text-lg font-semibold text-purple-700 mb-4">{category}</h2>
+				<h2 class="text-lg font-semibold text-slate-700 mb-4">{category}</h2>
 
 				{#each groupedItems[category] as item}
 					<div class="border-b border-gray-100 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0">
 						<div class="flex items-start gap-2 mb-3">
-							<span class="text-sm font-medium text-purple-600 shrink-0">{item.itemCode}</span>
+							<span class="text-sm font-medium text-slate-500 font-mono shrink-0">{item.itemCode}</span>
 							<span class="text-gray-700">{item.description}</span>
 							{#if item.isDisposalCriteria}
 								<span class="ml-auto px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full shrink-0">
@@ -246,7 +272,7 @@
 									<textarea
 										id="remark_{item.itemCode}"
 										bind:value={formData.items[item.itemCode].remark}
-										class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+										class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
 										rows="2"
 										placeholder="ระบุหมายเหตุ..."
 									></textarea>
@@ -279,7 +305,7 @@
 				<textarea
 					id="overallRemark"
 					bind:value={formData.overallRemark}
-					class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+					class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
 					rows="3"
 					placeholder="ระบุหมายเหตุเพิ่มเติม..."
 				></textarea>

@@ -5,14 +5,14 @@
 	$: ({ inspection } = $page.data);
 </script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen">
 	<!-- Header -->
 	<header class="gradient-bg text-white shadow-lg">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 relative z-10">
 			<div class="flex items-center justify-between">
 				<div>
-					<h1 class="text-2xl font-bold">รายละเอียดการตรวจ</h1>
-					<p class="text-purple-100 text-sm">{inspection.inspectionCode}</p>
+					<h1 class="text-2xl font-bold tracking-tight">รายละเอียดการตรวจ</h1>
+					<p class="text-blue-200/70 text-sm font-mono">{inspection.inspectionCode}</p>
 				</div>
 				<a
 					href="/department/{inspection.department.id}/month/{inspection.year}/{inspection.month}"
@@ -99,7 +99,7 @@
 					<div class="border-b border-gray-100 pb-4 last:border-0">
 						<div class="flex justify-between items-start mb-2">
 							<div class="flex-1">
-								<span class="text-sm font-medium text-purple-600">{detail.itemCode}</span>
+								<span class="text-sm font-medium text-slate-500 font-mono">{detail.itemCode}</span>
 								<p class="text-gray-800">{detail.description}</p>
 							</div>
 							<div class="text-right ml-4">
@@ -135,7 +135,7 @@
 		<div class="flex gap-4 mt-6">
 			<a
 				href="/inspection/new/{inspection.generatorId}/{inspection.year}/{inspection.month}"
-				class="flex-1 px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors text-center"
+				class="flex-1 px-6 py-3 gradient-bg text-white font-semibold rounded-lg hover:opacity-90 transition-opacity text-center relative z-10"
 			>
 				✏️ แก้ไข
 			</a>
