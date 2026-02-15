@@ -31,8 +31,8 @@ Generator inspection management system (Thai language UI) built with SvelteKit 5
 
 ### Auth & Session
 - `src/lib/server/session.ts` — Session sign/verify using HMAC-SHA256, cookie-based auth
-- `src/hooks.server.ts` — Route protection middleware. Admin routes require `role === 'admin'`. All `/dashboard`, `/department`, `/inspection` routes require login.
-- User roles: `admin`, `inspector`, `viewer`
+- `src/hooks.server.ts` — Route protection middleware. Only `/admin` routes require login with `role === 'admin'`. All other routes (`/dashboard`, `/department`, `/inspection`) are public — no login required.
+- User roles: `admin`, `inspector`, `viewer` (login required only for admin panel)
 
 ### Route Structure
 - `/` — Home/KPI dashboard (public-facing summary)
@@ -40,9 +40,15 @@ Generator inspection management system (Thai language UI) built with SvelteKit 5
 - `/dashboard` — User dashboard (requires login)
 - `/department/[id]/calendar` — Department calendar view
 - `/department/[id]/month/[year]/[month]` — Monthly inspection list per department
-- `/inspection/new/[generator_id]/[year]/[month]` — Create new inspection
-- `/inspection/[id]` — View/edit inspection
+- `/inspection/new/[generator_id]/[year]/[month]` — Create/edit inspection (form actions: `create`, `update`)
+- `/inspection/[id]` — View inspection details
 - `/admin/*` — Admin panel (departments, generators, users, form-templates, inspections)
+- `/api/auth/*` — Login/logout API endpoints (public)
+
+### Conventions
+- **No public API routes for data mutations**: Use SvelteKit form actions (`+page.server.ts` with `export const actions`) instead of `/api/*` routes for create/update/delete operations. API routes are public endpoints accessible from outside; form actions are protected by route middleware in `hooks.server.ts` automatically.
+- **API routes (`/api/*`) are only for**: authentication endpoints (`/api/auth/*`) or truly public-facing APIs.
+- **Form action call pattern**: Client-side code calls actions via `fetch('?/actionName', { method: 'POST', ... })` and checks `result.type === 'success'` or `result.type === 'failure'`.
 
 ### Business Logic
 - `src/lib/server/inspectionLogic.ts` — Inspection status calculation (overall status, machine status based on disposal criteria), inspection code generation (`INS-{timestamp}-{random}`)

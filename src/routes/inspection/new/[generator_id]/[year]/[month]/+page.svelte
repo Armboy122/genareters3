@@ -125,7 +125,7 @@
 		isSubmitting = true;
 
 		try {
-			const method = existingInspection ? 'PUT' : 'POST';
+			const actionName = existingInspection ? 'update' : 'create';
 
 			const payload = existingInspection
 				? {
@@ -135,26 +135,26 @@
 						overallRemark: formData.overallRemark
 					}
 				: {
-						generatorId: generator.id,
-						month,
-						year,
 						inspectorName: formData.inspectorName,
 						items: formData.items,
 						overallRemark: formData.overallRemark
 					};
 
-			const response = await fetch('/api/inspections', {
-				method,
+			const response = await fetch(`?/${actionName}`, {
+				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(payload)
 			});
 
 			const result = await response.json();
 
-			if (result.success) {
+			// SvelteKit action responses have a different shape
+			if (result.type === 'success') {
 				goto(`/department/${generator.department.id}/month/${year}/${month}`);
+			} else if (result.type === 'failure') {
+				errorMessage = result.data?.error || 'บันทึกข้อมูลไม่สำเร็จ';
 			} else {
-				errorMessage = result.message || 'บันทึกข้อมูลไม่สำเร็จ';
+				errorMessage = 'บันทึกข้อมูลไม่สำเร็จ';
 			}
 		} catch (e) {
 			errorMessage = 'เกิดข้อผิดพลาดในการบันทึก';
