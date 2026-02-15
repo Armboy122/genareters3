@@ -56,7 +56,9 @@ self.addEventListener('fetch', (event) => {
 
 			return response;
 		} catch {
-			return cache.match(event.request);
+			const cached = await cache.match(event.request);
+			if (cached) return cached;
+			return new Response('Offline - Resource not cached', { status: 503 });
 		}
 	}
 
