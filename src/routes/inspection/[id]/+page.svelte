@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { formatThaiDate } from '$lib/utils';
 
-	$: ({ inspection } = $page.data);
+	let inspection = $derived($page.data.inspection);
 </script>
 
 <div class="min-h-screen">

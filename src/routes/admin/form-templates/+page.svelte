@@ -3,8 +3,6 @@
 	import type { PageData } from './$types';
 	import Button from '$lib/components/Button.svelte';
 
-	export let data: PageData;
-
 	type FormTemplateWithStats = {
 		id: string;
 		name: string;
@@ -15,16 +13,18 @@
 		generatorCount: number;
 	};
 
-	let showModal = false;
-	let editingTemplate: FormTemplateWithStats | null = null;
-	let saving = false;
-	let errorMessage = '';
-	let formName = '';
-	let formDescription = '';
-	let duplicatingId: string | null = null;
-	let togglingId: string | null = null;
+	let { data } = $props();
 
-	$: templates = data.templates as FormTemplateWithStats[];
+	let showModal = $state(false);
+	let editingTemplate: FormTemplateWithStats | null = $state(null);
+	let saving = $state(false);
+	let errorMessage = $state('');
+	let formName = $state('');
+	let formDescription = $state('');
+	let duplicatingId: string | null = $state(null);
+	let togglingId: string | null = $state(null);
+
+	let templates = $derived(data.templates as FormTemplateWithStats[]);
 
 	function openCreate() {
 		editingTemplate = null;
@@ -50,7 +50,7 @@
 			<p class="text-gray-500 text-sm mt-1">สร้าง แก้ไข หรือทำสำเนาแบบฟอร์ม</p>
 		</div>
 		<button
-			on:click={openCreate}
+			onclick={openCreate}
 			class="px-4 py-2.5 gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium relative z-10"
 		>
 			+ สร้างแบบฟอร์มใหม่
@@ -95,7 +95,7 @@
 							📝 แก้ไขหัวข้อ
 						</a>
 						<button
-							on:click={() => openEdit(tmpl)}
+							onclick={() => openEdit(tmpl)}
 							class="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
 						>
 							แก้ไขชื่อ

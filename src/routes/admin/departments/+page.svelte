@@ -6,23 +6,23 @@
 
 	type DepartmentWithCount = Department & { generatorCount: number };
 
-	export let data: PageData;
+	let { data } = $props();
 
-	let search = '';
-	let showModal = false;
-	let editingDept: DepartmentWithCount | null = null;
-	let formName = '';
-	let saving = false;
-	let errorMessage = '';
-	let deleting = false;
-	let toggling: string | null = null;
+	let search = $state('');
+	let showModal = $state(false);
+	let editingDept: DepartmentWithCount | null = $state(null);
+	let formName = $state('');
+	let saving = $state(false);
+	let errorMessage = $state('');
+	let deleting: string | null = $state(null);
+	let toggling: string | null = $state(null);
 
-	$: departments = data.departments as DepartmentWithCount[];
+	let departments = $derived(data.departments as DepartmentWithCount[]);
 
 	// Instant client-side filtering
-	$: filteredDepts = departments.filter((dept) =>
+	let filteredDepts = $derived(departments.filter((dept) =>
 		dept.name.toLowerCase().includes(search.toLowerCase())
-	);
+	));
 
 	function openCreate() {
 		editingDept = null;
@@ -46,7 +46,7 @@
 			<p class="text-gray-500 text-sm mt-1">เพิ่ม แก้ไข หรือลบสังกัด/การไฟฟ้า — ทั้งหมด {departments.length} สังกัด</p>
 		</div>
 		<button
-			on:click={openCreate}
+			onclick={openCreate}
 			class="px-4 py-2.5 gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium relative z-10"
 		>
 			+ เพิ่มสังกัดใหม่
@@ -65,7 +65,7 @@
 			/>
 			{#if search}
 				<button
-					on:click={() => (search = '')}
+					onclick={() => (search = '')}
 					class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
 				>✕</button>
 			{/if}
@@ -108,39 +108,38 @@
 								</td>
 								<td class="px-4 py-3 text-right">
 									<button
-									 on:click={() => openEdit(dept)}
-									 class="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors mr-1"
+										onclick={() => openEdit(dept)}
+										class="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors mr-1"
 									>
-									 แก้ไข
+										แก้ไข
 									</button>
 									<form
-									 method="POST"
-									 action="?/delete"
-									 use:enhance={() => {
-									  deleting = dept.id;
-									  if (!confirm(`ยืนยันลบสังกัด "${dept.name}" ?`)) {
-									  deleting = false;
-									  return () => {};
-									  }
-									  return async ({ result, update }) => {
-									   deleting = false;
-									   if (result.type === 'failure') {
-									  alert(result.data?.error || 'ไม่สามารถลบได้');
-									 }
-									 await update();
-									};
-									 }}
-									 class="inline"
+										method="POST"
+										action="?/delete"
+										use:enhance={() => {
+										  deleting = dept.id;
+										  if (!confirm(`ยืนยันลบสังกัด "${dept.name}" ?`)) {
+										  deleting = null;
+										  return () => {};
+										  }
+										  return async ({ result, update }) => {
+										   deleting = null;
+										   if (result.type === 'failure') {
+										  alert(result.data?.error || 'ไม่สามารถลบได้');
+										 }
+										 await update();
+										};
+										}}
 									>
-									 <input type="hidden" name="id" value={dept.id} />
-									 <Button
-									 type="submit"
-									variant="danger"
-									size="sm"
-									loading={deleting === dept.id}
-									>
-									ลบ
-									</Button>
+										<input type="hidden" name="id" value={dept.id} />
+										<Button
+											type="submit"
+											variant="danger"
+											size="sm"
+											loading={deleting === dept.id}
+										>
+											ลบ
+										</Button>
 									</form>
 								</td>
 							</tr>

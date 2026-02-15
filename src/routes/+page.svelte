@@ -2,22 +2,31 @@
 	import { page } from '$app/stores';
 	import { getShortThaiMonthName } from '$lib/utils';
 
-	$: ({ departments, overall, currentMonth, currentYear, formStats, topAbnormalByForm, heatmap, kpiTrend, repeatRepair } = $page.data);
+	let pageData = $derived($page.data);
+	let departments = $derived(pageData.departments);
+	let overall = $derived(pageData.overall);
+	let currentMonth = $derived(pageData.currentMonth);
+	let currentYear = $derived(pageData.currentYear);
+	let formStats = $derived(pageData.formStats);
+	let topAbnormalByForm = $derived(pageData.topAbnormalByForm);
+	let heatmap = $derived(pageData.heatmap);
+	let kpiTrend = $derived(pageData.kpiTrend);
+	let repeatRepair = $derived(pageData.repeatRepair);
 
-	let searchQuery = '';
-	let activeTab: 'overview' | 'analysis' | 'heatmap' = 'overview';
+	let searchQuery = $state('');
+	let activeTab: 'overview' | 'analysis' | 'heatmap' = $state('overview');
 
-	$: filteredDepartments = departments.filter((dept: any) =>
+	let filteredDepartments = $derived(departments.filter((dept: any) =>
 		dept.name.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	));
 
 	// KPI Trend chart helpers
-	$: trendMax = Math.max(...(kpiTrend?.map((t: any) => t.kpiPercent) || [100]), 100);
+	let trendMax = $derived(Math.max(...(kpiTrend?.map((t: any) => t.kpiPercent) || [100]), 100));
 
 	// Heatmap summary stats
-	$: heatmapCompleteCells = heatmap?.reduce((s: number, d: any) => s + d.months.filter((m: any) => m.status === 'complete').length, 0) || 0;
-	$: heatmapPartialCells = heatmap?.reduce((s: number, d: any) => s + d.months.filter((m: any) => m.status === 'partial').length, 0) || 0;
-	$: heatmapNoneCells = heatmap?.reduce((s: number, d: any) => s + d.months.filter((m: any) => m.status === 'none').length, 0) || 0;
+	let heatmapCompleteCells = $derived(heatmap?.reduce((s: number, d: any) => s + d.months.filter((m: any) => m.status === 'complete').length, 0) || 0);
+	let heatmapPartialCells = $derived(heatmap?.reduce((s: number, d: any) => s + d.months.filter((m: any) => m.status === 'partial').length, 0) || 0);
+	let heatmapNoneCells = $derived(heatmap?.reduce((s: number, d: any) => s + d.months.filter((m: any) => m.status === 'none').length, 0) || 0);
 
 	function scoreColor(score: number): string {
 		if (score >= 5) return 'text-emerald-600';
@@ -196,21 +205,21 @@
 		<!-- Tab Navigation -->
 		<div class="mb-6 flex gap-1 bg-gray-100 rounded-lg p-1">
 			<button
-				on:click={() => (activeTab = 'overview')}
+				onclick={() => (activeTab = 'overview')}
 				class="flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all
 					{activeTab === 'overview' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}"
 			>
 				📊 ภาพรวมสังกัด
 			</button>
 			<button
-				on:click={() => (activeTab = 'analysis')}
+				onclick={() => (activeTab = 'analysis')}
 				class="flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all
 					{activeTab === 'analysis' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}"
 			>
 				🔍 วิเคราะห์ข้อมูล
 			</button>
 			<button
-				on:click={() => (activeTab = 'heatmap')}
+				onclick={() => (activeTab = 'heatmap')}
 				class="flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all
 					{activeTab === 'heatmap' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}"
 			>
@@ -236,7 +245,7 @@
 					/>
 					{#if searchQuery}
 						<button
-							on:click={() => (searchQuery = '')}
+							onclick={() => (searchQuery = '')}
 							class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
 						>✕</button>
 					{/if}
@@ -570,7 +579,7 @@
 							</thead>
 							<tbody>
 								{#each heatmap as dept}
-									{@const completedMonths = dept.months.filter((m) => m.status === 'complete').length}
+									{@const completedMonths = dept.months.filter((m: any) => m.status === 'complete').length}
 									<tr class="border-t border-gray-100 hover:bg-gray-50/50">
 										<td class="py-2 px-3 font-medium text-gray-700 sticky left-0 bg-white truncate max-w-[200px]" title={dept.name}>
 											<a href="/department/{dept.id}/calendar" class="hover:text-blue-600 hover:underline">{dept.name}</a>

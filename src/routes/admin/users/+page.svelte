@@ -4,7 +4,7 @@
 	import type { Department, UserRole } from '$lib/db/schema';
 	import Button from '$lib/components/Button.svelte';
 
-	export let data: PageData;
+	let { data } = $props();
 
 	type UserWithDepartment = {
 		id: string;
@@ -17,24 +17,32 @@
 		createdAt: Date;
 	};
 
-	$: userList = data.users as UserWithDepartment[];
-	$: departmentsList = data.departments as Department[];
+	let userList = $derived(data.users as UserWithDepartment[]);
+	let departmentsList = $derived(data.departments as Department[]);
 
-	let search = '';
-	let showModal = false;
-	let editingUser: UserWithDepartment | null = null;
-	let saving = false;
-	let errorMessage = '';
+	let search = $state('');
+	let showModal = $state(false);
+	let editingUser: UserWithDepartment | null = $state(null);
+	let saving = $state(false);
+	let errorMessage = $state('');
 
-	let formData = {
+	let formData = $state({
 		username: '',
 		password: '',
 		displayName: '',
 		role: 'inspector' as UserRole,
 		departmentId: ''
-	};
-	let deletingId: string | null = null;
-	let togglingId: string | null = null;
+	});
+	let deletingId: string | null = $state(null);
+	let togglingId: string | null = $state(null);
+
+	let filteredUsers = $derived(search
+		? userList.filter((u) =>
+			u.username.toLowerCase().includes(search.toLowerCase()) ||
+			u.displayName.toLowerCase().includes(search.toLowerCase())
+		)
+		: userList
+	);
 
 	const roleLabels: Record<UserRole, string> = {
 		admin: 'ผู้ดูแลระบบ',
@@ -47,13 +55,6 @@
 		inspector: 'bg-blue-100 text-blue-700',
 		viewer: 'bg-gray-100 text-gray-600'
 	};
-
-	$: filteredUsers = search
-		? userList.filter((u) =>
-			u.username.toLowerCase().includes(search.toLowerCase()) ||
-			u.displayName.toLowerCase().includes(search.toLowerCase())
-		)
-		: userList;
 
 	function openCreate() {
 		editingUser = null;
@@ -83,7 +84,7 @@
 			<p class="text-gray-500 text-sm mt-1">เพิ่ม แก้ไข หรือปิดใช้งานผู้ใช้</p>
 		</div>
 		<button
-			on:click={openCreate}
+			onclick={openCreate}
 			class="px-4 py-2.5 gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium relative z-10"
 		>
 			+ เพิ่มผู้ใช้ใหม่
@@ -135,7 +136,7 @@
 								</td>
 								<td class="px-4 py-3 text-right whitespace-nowrap">
 									<button
-										on:click={() => openEdit(user)}
+										onclick={() => openEdit(user)}
 										class="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors mr-1"
 									>
 										แก้ไข

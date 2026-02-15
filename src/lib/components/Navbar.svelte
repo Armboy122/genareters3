@@ -31,7 +31,7 @@
 
 				<!-- Desktop Nav -->
 				<div class="hidden sm:flex items-center gap-0.5">
-					{#each navItems as item}
+					{#each navItems as item (item.href)}
 						<a
 							href={item.href}
 							class="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm transition-all
@@ -66,7 +66,7 @@
 			<!-- Mobile menu -->
 			{#if mobileOpen}
 				<div class="sm:hidden pb-2 border-t border-white/10 mt-0.5 pt-1.5 space-y-0.5">
-					{#each navItems as item}
+					{#each navItems as item (item.href)}
 						<a
 							href={item.href}
 							onclick={() => (mobileOpen = false)}

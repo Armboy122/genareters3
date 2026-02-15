@@ -5,7 +5,7 @@
 	import type { Department, FormTemplate } from '$lib/db/schema';
 	import Button from '$lib/components/Button.svelte';
 
-	export let data: PageData;
+	let { data } = $props();
 
 	type GeneratorWithRelations = {
 		id: string;
@@ -22,22 +22,23 @@
 		createdAt: Date;
 	};
 
-	$: generators = data.generators as GeneratorWithRelations[];
-	$: departmentsList = data.departments as Department[];
-	$: templatesList = data.formTemplates as FormTemplate[];
-	$: pagination = data.pagination;
+	let generators = $derived(data.generators as GeneratorWithRelations[]);
+	let departmentsList = $derived(data.departments as Department[]);
+	let templatesList = $derived(data.formTemplates as FormTemplate[]);
+	let pagination = $derived(data.pagination);
 
-	let search = data.filters?.search || '';
-	let filterDept = data.filters?.departmentId || '';
-	let filterType = data.filters?.type || '';
-	let filterTemplate = data.filters?.formTemplateId || '';
+	let search = $state(data.filters?.search || '');
+	let filterDept = $state(data.filters?.departmentId || '');
+	let filterType = $state(data.filters?.type || '');
+	let filterTemplate = $state(data.filters?.formTemplateId || '');
 
-	let showModal = false;
-	let editingGen: GeneratorWithRelations | null = null;
-	let saving = false;
-	let errorMessage = '';
+	let showModal = $state(false);
+	let editingGen: GeneratorWithRelations | null = $state(null);
+	let saving = $state(false);
+	let errorMessage = $state('');
+	let togglingId: string | null = $state(null);
 
-	let formData = {
+	let formData = $state({
 		assetId: '',
 		type: '',
 		sizeKw: '',
@@ -45,14 +46,14 @@
 		location: '',
 		departmentId: '',
 		formTemplateId: ''
-	};
+	});
 
-	let deptSearch = '';
-	let showDeptDropdown = false;
+	let deptSearch = $state('');
+	let showDeptDropdown = $state(false);
 
-	$: filteredDeptsList = departmentsList.filter((d) =>
+	let filteredDeptsList = $derived(departmentsList.filter((d) =>
 		d.name.toLowerCase().includes(deptSearch.toLowerCase())
-	);
+	));
 
 	function selectDept(dept: Department) {
 		formData.departmentId = dept.id;
@@ -113,7 +114,7 @@
 			<p class="text-gray-500 text-sm mt-1">เพิ่ม แก้ไข หรือปิดใช้งานเครื่อง</p>
 		</div>
 		<button
-			on:click={openCreate}
+			onclick={openCreate}
 			class="px-4 py-2.5 gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium relative z-10"
 		>
 			+ เพิ่มเครื่องใหม่
@@ -126,30 +127,30 @@
 			<input
 				type="text"
 				bind:value={search}
-				on:keydown={(e) => e.key === 'Enter' && handleFilter()}
+				onkeydown={(e) => e.key === 'Enter' && handleFilter()}
 				placeholder="ค้นหา รหัส/ผลิตภัณฑ์/สถานที่..."
 				class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent"
 			/>
-			<select bind:value={filterDept} on:change={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+			<select bind:value={filterDept} onchange={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
 				<option value="">ทุกสังกัด</option>
 				{#each departmentsList as dept}
 					<option value={dept.id}>{dept.name}</option>
 				{/each}
 			</select>
-			<select bind:value={filterType} on:change={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+			<select bind:value={filterType} onchange={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
 				<option value="">ทุกประเภท</option>
 				{#each generatorTypes as t}
 					<option value={t}>{t}</option>
 				{/each}
 			</select>
-			<select bind:value={filterTemplate} on:change={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+			<select bind:value={filterTemplate} onchange={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
 				<option value="">ทุกแบบฟอร์ม</option>
 				{#each templatesList as tmpl}
 					<option value={tmpl.id}>{tmpl.name}</option>
 				{/each}
 			</select>
 			<button
-				on:click={handleFilter}
+				onclick={handleFilter}
 				class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
 			>
 				🔍 ค้นหา
@@ -198,7 +199,7 @@
 								</td>
 								<td class="px-3 py-3 text-right whitespace-nowrap">
 									<button
-										on:click={() => openEdit(gen)}
+										onclick={() => openEdit(gen)}
 										class="px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded hover:bg-amber-100 transition-colors mr-1"
 									>
 										แก้ไข
@@ -241,7 +242,7 @@
 					<div class="flex gap-1">
 						{#each Array(pagination.totalPages) as _, i}
 							<button
-								on:click={() => goToPage(i + 1)}
+								onclick={() => goToPage(i + 1)}
 								class="px-3 py-1 rounded text-xs transition-colors
 								{pagination.page === i + 1 ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}"
 							>
@@ -332,8 +333,8 @@
 						<input
 							type="text"
 							bind:value={deptSearch}
-							on:focus={() => (showDeptDropdown = true)}
-							on:input={() => { showDeptDropdown = true; formData.departmentId = ''; }}
+							onfocus={() => (showDeptDropdown = true)}
+							oninput={() => { showDeptDropdown = true; formData.departmentId = ''; }}
 							placeholder="พิมพ์เพื่อค้นหาสังกัด / การไฟฟ้า..."
 							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light"
 						/>
@@ -345,7 +346,7 @@
 								{#each filteredDeptsList as dept}
 									<button
 										type="button"
-										on:click={() => selectDept(dept)}
+										onclick={() => selectDept(dept)}
 										class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors {formData.departmentId === dept.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}"
 									>
 										{dept.name}

@@ -2,7 +2,9 @@
 	import { page } from '$app/stores';
 	import { formatThaiDate } from '$lib/utils';
 
-	$: ({ stats, recentInspections } = $page.data);
+	let pageData = $derived($page.data);
+	let stats = $derived(pageData.stats);
+	let recentInspections = $derived(pageData.recentInspections);
 
 	const statCards = [
 		{ label: 'สังกัดทั้งหมด', key: 'departments', icon: '🏢', color: 'bg-blue-50 text-blue-700 border-blue-200' },

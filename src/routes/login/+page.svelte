@@ -3,12 +3,12 @@
 	import { page } from '$app/stores';
 	import Button from '$lib/components/Button.svelte';
 
-	let username = '';
-	let password = '';
-	let loading = false;
-	let errorMessage = '';
+	let username = $state('');
+	let password = $state('');
+	let loading = $state(false);
+	let errorMessage = $state('');
 
-	$: redirectTo = $page.url.searchParams.get('redirect') || '/admin';
+	let redirectTo = $derived($page.url.searchParams.get('redirect') || '/admin');
 
 	async function handleLogin() {
 		if (!username.trim() || !password) {
@@ -61,7 +61,7 @@
 				</div>
 			{/if}
 
-			<form on:submit|preventDefault={handleLogin} class="space-y-5">
+			<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }} class="space-y-5">
 				<div>
 					<label for="login-username" class="block text-sm font-medium text-gray-700 mb-1.5">ชื่อผู้ใช้</label>
 					<input

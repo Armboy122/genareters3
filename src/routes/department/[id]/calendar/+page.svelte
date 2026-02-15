@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	$: ({ department, year, calendar } = $page.data);
+	let pageData = $derived($page.data);
+	let department = $derived(pageData.department);
+	let year = $derived(pageData.year);
+	let calendar = $derived(pageData.calendar);
 
-	$: totalInspected = calendar.reduce((s: number, m: any) => s + Number(m.inspected), 0);
-	$: totalAll = calendar.reduce((s: number, m: any) => s + Number(m.total), 0);
-	$: completedMonths = calendar.filter((m: any) => Number(m.inspected) >= Number(m.total) && Number(m.total) > 0).length;
+	let totalInspected = $derived(calendar.reduce((s: number, m: any) => s + Number(m.inspected), 0));
+	let totalAll = $derived(calendar.reduce((s: number, m: any) => s + Number(m.total), 0));
+	let completedMonths = $derived(calendar.filter((m: any) => Number(m.inspected) >= Number(m.total) && Number(m.total) > 0).length);
 
 	const now = new Date();
 	const currentYear = now.getFullYear();

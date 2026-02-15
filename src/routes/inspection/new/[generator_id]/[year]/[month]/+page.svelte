@@ -3,24 +3,31 @@
 	import { goto } from '$app/navigation';
 	import Button from '$lib/components/Button.svelte';
 
-	$: ({ generator, formTemplate, groupedItems, existingInspection, previousMonthInspection, year, month } = $page.data);
+	let pageData = $derived($page.data);
+	let generator = $derived(pageData.generator);
+	let formTemplate = $derived(pageData.formTemplate);
+	let groupedItems = $derived(pageData.groupedItems);
+	let existingInspection = $derived(pageData.existingInspection);
+	let previousMonthInspection = $derived(pageData.previousMonthInspection);
+	let year = $derived(pageData.year);
+	let month = $derived(pageData.month);
 
-	let formData = {
+	let formData = $state({
 		inspectorName: '',
 		items: {} as Record<string, { status: string; remark: string }>,
 		overallRemark: ''
-	};
+	});
 
-	let errorMessage = '';
-	let isSubmitting = false;
-	let initialized = false;
-	let usedPreviousMonth = false;
-	let loadingPrevious = false;
+	let errorMessage = $state('');
+	let isSubmitting = $state(false);
+	let initialized = $state(false);
+	let usedPreviousMonth = $state(false);
+	let loadingPrevious = $state(false);
 
 	// Toast state
-	let toastMessage = '';
-	let toastType: 'success' | 'error' | 'warning' = 'success';
-	let toastVisible = false;
+	let toastMessage = $state('');
+	let toastType: 'success' | 'error' | 'warning' = $state('success');
+	let toastVisible = $state(false);
 	let toastTimer: ReturnType<typeof setTimeout>;
 
 	function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
@@ -43,40 +50,41 @@
 	}
 
 	// Initialize form data: existing inspection gets pre-filled, new inspection starts EMPTY
-	$: if (!initialized && (existingInspection || groupedItems)) {
-		initialized = true;
-		if (existingInspection) {
-			// Edit mode: fill from existing data
-			formData.inspectorName = existingInspection.inspectorName;
-			formData.overallRemark = existingInspection.overallRemark || '';
-			for (const category in groupedItems) {
-				for (const item of groupedItems[category]) {
-					formData.items[item.itemCode] = { status: '', remark: '' };
+	$effect(() => {
+		if (!initialized && (existingInspection || groupedItems)) {
+			initialized = true;
+			if (existingInspection) {
+				// Edit mode: fill from existing data
+				formData.inspectorName = existingInspection.inspectorName;
+				formData.overallRemark = existingInspection.overallRemark || '';
+				for (const category in groupedItems) {
+					for (const item of groupedItems[category]) {
+						formData.items[item.itemCode] = { status: '', remark: '' };
+					}
 				}
-			}
-			for (const detail of existingInspection.details) {
-				formData.items[detail.itemCode] = {
-					status: detail.status,
-					remark: detail.remark || ''
-				};
-			}
-		} else if (groupedItems) {
-			// New inspection: all items start with NO status selected
-			for (const category in groupedItems) {
-				for (const item of groupedItems[category]) {
-					formData.items[item.itemCode] = { status: '', remark: '' };
+				for (const detail of existingInspection.details) {
+					formData.items[detail.itemCode] = {
+						status: detail.status,
+						remark: detail.remark || ''
+					};
+				}
+			} else if (groupedItems) {
+				// New inspection: all items start with NO status selected
+				for (const category in groupedItems) {
+					for (const item of groupedItems[category]) {
+						formData.items[item.itemCode] = { status: '', remark: '' };
+					}
 				}
 			}
 		}
-		formData = formData;
-	}
+	});
 
 	// Calculate summary
-	$: normalCount = Object.values(formData.items).filter((i) => i.status === 'ปกติ').length;
-	$: abnormalCount = Object.values(formData.items).filter((i) => i.status === 'ไม่ปกติ').length;
-	$: unselectedCount = Object.values(formData.items).filter((i) => !i.status).length;
-	$: totalItems = Object.keys(formData.items).length;
-	$: hasPreviousData = !!previousMonthInspection;
+	let normalCount = $derived(Object.values(formData.items).filter((i) => i.status === 'ปกติ').length);
+	let abnormalCount = $derived(Object.values(formData.items).filter((i) => i.status === 'ไม่ปกติ').length);
+	let unselectedCount = $derived(Object.values(formData.items).filter((i) => !i.status).length);
+	let totalItems = $derived(Object.keys(formData.items).length);
+	let hasPreviousData = $derived(!!previousMonthInspection);
 
 	function loadPreviousMonth() {
 		if (!previousMonthInspection) return;
@@ -234,7 +242,7 @@
 				</div>
 				<button
 					type="button"
-					on:click={loadPreviousMonth}
+					onclick={loadPreviousMonth}
 					disabled={loadingPrevious}
 					class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
 				>
@@ -257,7 +265,7 @@
 				</div>
 				<button
 					type="button"
-					on:click={clearAll}
+					onclick={clearAll}
 					class="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs"
 				>
 					ล้างทั้งหมด
@@ -290,21 +298,21 @@
 		<div class="mb-6 flex flex-wrap gap-2">
 			<button
 				type="button"
-				on:click={selectAllNormal}
+				onclick={selectAllNormal}
 				class="flex-1 min-w-[140px] px-4 py-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
 			>
 				✅ เลือกปกติทั้งหมด
 			</button>
 			<button
 				type="button"
-				on:click={selectAllAbnormal}
+				onclick={selectAllAbnormal}
 				class="flex-1 min-w-[140px] px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
 			>
 				❌ เลือกไม่ปกติทั้งหมด
 			</button>
 			<button
 				type="button"
-				on:click={clearAll}
+				onclick={clearAll}
 				class="px-4 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm"
 			>
 				🗑️ ล้าง
@@ -344,7 +352,7 @@
 										type="radio"
 										name="item_{item.itemCode}"
 										checked={formData.items[item.itemCode].status === 'ปกติ'}
-										on:change={() => setItemStatus(item.itemCode, 'ปกติ')}
+										onchange={() => setItemStatus(item.itemCode, 'ปกติ')}
 										class="w-5 h-5 text-green-600 focus:ring-green-500"
 									/>
 									<span class="text-sm text-green-700">ปกติ</span>
@@ -354,7 +362,7 @@
 										type="radio"
 										name="item_{item.itemCode}"
 										checked={formData.items[item.itemCode].status === 'ไม่ปกติ'}
-										on:change={() => setItemStatus(item.itemCode, 'ไม่ปกติ')}
+										onchange={() => setItemStatus(item.itemCode, 'ไม่ปกติ')}
 										class="w-5 h-5 text-red-600 focus:ring-red-500"
 									/>
 									<span class="text-sm text-red-700">ไม่ปกติ</span>
@@ -449,7 +457,7 @@
 				{#if toastType === 'success'}✅{:else if toastType === 'error'}❌{:else}⚠️{/if}
 			</span>
 			<span>{toastMessage}</span>
-			<button on:click={() => toastVisible = false} class="ml-2 opacity-70 hover:opacity-100 transition-opacity">✕</button>
+			<button onclick={() => toastVisible = false} class="ml-2 opacity-70 hover:opacity-100 transition-opacity">✕</button>
 		</div>
 	</div>
 {/if}

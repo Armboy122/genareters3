@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import type { FormTemplateItem } from '$lib/db/schema';
 
-	$: templateId = $page.params.id;
+	let templateId = $derived($page.params.id);
 
 	type EditableItem = FormTemplateItem & { sortOrder: number; _deleted?: boolean; isNew?: boolean; isNewCategory?: boolean };
 	type NewItem = {
@@ -19,12 +19,16 @@
 		_deleted?: boolean;
 	};
 
-	export let data;
-	let templateName = data.template.name;
-	let templateDescription = data.template.description || '';
-	let items: (EditableItem | NewItem)[] = data.items;
-	let saving = false;
-	let errorMessage = '';
+	let { data } = $props();
+	let templateName = $derived(data.template.name);
+	let templateDescription = $derived(data.template.description || '');
+	let items: (EditableItem | NewItem)[] = $state(data.items);
+	let saving = $state(false);
+	let errorMessage = $state('');
+
+	let visibleItems = $derived(items.filter((i) => !i._deleted));
+	let categories = $derived([...new Set(visibleItems.map((i) => i.category).filter(Boolean))]);
+	let itemsJson = $derived(JSON.stringify(items));
 
 	function addItem() {
 		const lastItem = items[items.length - 1];
@@ -79,10 +83,6 @@
 		items[newIndex] = temp;
 		items = items.map((item, i) => ({ ...item, sortOrder: i }));
 	}
-
-	$: visibleItems = items.filter((i) => !i._deleted);
-	$: categories = [...new Set(visibleItems.map((i) => i.category).filter(Boolean))];
-	$: itemsJson = JSON.stringify(items);
 </script>
 
 <form
@@ -153,14 +153,14 @@
 				<div class="flex gap-2">
 					<button
 						type="button"
-						on:click={addCategory}
+						onclick={addCategory}
 						class="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
 					>
 						+ หมวดใหม่
 					</button>
 					<button
 						type="button"
-						on:click={addItem}
+						onclick={addItem}
 						class="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
 					>
 						+ เพิ่มหัวข้อ
@@ -180,13 +180,13 @@
 								<div class="flex flex-col gap-0.5 pt-1">
 									<button
 										type="button"
-										on:click={() => moveItem(itemIndex, -1)}
+										onclick={() => moveItem(itemIndex, -1)}
 										class="text-gray-400 hover:text-gray-600 text-xs leading-none"
 										aria-label="เลื่อนขึ้น"
 									>▲</button>
 									<button
 										type="button"
-										on:click={() => moveItem(itemIndex, 1)}
+										onclick={() => moveItem(itemIndex, 1)}
 										class="text-gray-400 hover:text-gray-600 text-xs leading-none"
 										aria-label="เลื่อนลง"
 									>▼</button>
@@ -226,7 +226,7 @@
 								<!-- Delete -->
 								<button
 									type="button"
-									on:click={() => removeItem(itemIndex)}
+									onclick={() => removeItem(itemIndex)}
 									class="text-red-400 hover:text-red-600 text-sm p-1"
 									aria-label="ลบหัวข้อ"
 								>✕</button>

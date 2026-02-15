@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	$: status = $page.status;
-	$: message = $page.error?.message || 'เกิดข้อผิดพลาด';
+	let status = $derived($page.status);
+	let message = $derived($page.error?.message || 'เกิดข้อผิดพลาด');
 </script>
 
 <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">

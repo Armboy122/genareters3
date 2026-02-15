@@ -1,13 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	$: ({ summary, departments, machineStats, month, year, monthName } = $page.data);
+	let pageData = $derived($page.data);
+	let summary = $derived(pageData.summary);
+	let departments = $derived(pageData.departments);
+	let machineStats = $derived(pageData.machineStats);
+	let month = $derived(pageData.month);
+	let year = $derived(pageData.year);
+	let monthName = $derived(pageData.monthName);
 
-	let searchQuery = '';
+	let searchQuery = $state('');
 
-	$: filteredDepartments = departments.filter((dept: any) =>
+	let filteredDepartments = $derived(departments.filter((dept: any) =>
 		dept.name.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+	));
 </script>
 
 <div class="min-h-screen">
@@ -127,7 +133,7 @@
 				/>
 				{#if searchQuery}
 					<button
-						on:click={() => (searchQuery = '')}
+						onclick={() => (searchQuery = '')}
 						class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
 					>✕</button>
 				{/if}

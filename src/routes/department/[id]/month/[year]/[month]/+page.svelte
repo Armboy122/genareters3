@@ -2,12 +2,18 @@
 	import { page } from '$app/stores';
 	import { formatThaiDate } from '$lib/utils';
 
-	$: ({ department, generators, inspectedCount, uninspectedCount, monthName, year } = $page.data);
+	let pageData = $derived($page.data);
+	let department = $derived(pageData.department);
+	let generators = $derived(pageData.generators);
+	let inspectedCount = $derived(pageData.inspectedCount);
+	let uninspectedCount = $derived(pageData.uninspectedCount);
+	let monthName = $derived(pageData.monthName);
+	let year = $derived(pageData.year);
 
-	let searchQuery = '';
-	let filterStatus = 'all';
+	let searchQuery = $state('');
+	let filterStatus = $state('all');
 
-	$: filteredGenerators = generators
+	let filteredGenerators = $derived(generators
 		.filter((g: any) => {
 			if (filterStatus === 'inspected' && !g.isInspected) return false;
 			if (filterStatus === 'uninspected' && g.isInspected) return false;
@@ -17,7 +23,8 @@
 			g.assetId.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			g.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
 			(g.product || '').toLowerCase().includes(searchQuery.toLowerCase())
-		);
+		)
+	);
 </script>
 
 <div class="min-h-screen">
@@ -71,22 +78,22 @@
 				/>
 				{#if searchQuery}
 					<button
-						on:click={() => (searchQuery = '')}
+						onclick={() => (searchQuery = '')}
 						class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
 					>✕</button>
 				{/if}
 			</div>
 			<div class="flex gap-1">
 				<button
-					on:click={() => (filterStatus = 'all')}
+					onclick={() => (filterStatus = 'all')}
 					class="px-3 py-2 rounded-lg text-sm transition-colors {filterStatus === 'all' ? 'gradient-bg text-white relative z-10' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}"
 				>ทั้งหมด ({generators.length})</button>
 				<button
-					on:click={() => (filterStatus = 'uninspected')}
+					onclick={() => (filterStatus = 'uninspected')}
 					class="px-3 py-2 rounded-lg text-sm transition-colors {filterStatus === 'uninspected' ? 'bg-orange-500 text-white' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}"
 				>ยังไม่ตรวจ ({uninspectedCount})</button>
 				<button
-					on:click={() => (filterStatus = 'inspected')}
+					onclick={() => (filterStatus = 'inspected')}
 					class="px-3 py-2 rounded-lg text-sm transition-colors {filterStatus === 'inspected' ? 'bg-green-500 text-white' : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'}"
 				>ตรวจแล้ว ({inspectedCount})</button>
 			</div>

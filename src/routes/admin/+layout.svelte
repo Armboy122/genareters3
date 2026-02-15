@@ -16,14 +16,15 @@
 		{ href: '/admin/inspections', label: 'ประวัติการตรวจ', icon: '🔍' }
 	];
 
-	$: currentPath = $page.url.pathname;
+	let currentPath = $derived($page.url.pathname);
 
 	function isActive(href: string) {
 		if (href === '/admin') return currentPath === '/admin';
 		return currentPath.startsWith(href);
 	}
 
-	let sidebarOpen = false;
+	let { children } = $props();
+	let sidebarOpen = $state(false);
 </script>
 
 <div class="min-h-screen flex">
@@ -31,11 +32,11 @@
 	{#if sidebarOpen}
 		<div
 			class="fixed inset-0 bg-black/50 z-40 lg:hidden"
-			on:click={() => (sidebarOpen = false)}
+			onclick={() => (sidebarOpen = false)}
 			role="button"
 			tabindex="-1"
 			aria-label="ปิดเมนู"
-			on:keydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}
+			onkeydown={(e) => e.key === 'Escape' && (sidebarOpen = false)}
 		></div>
 	{/if}
 
@@ -66,7 +67,7 @@
 					{isActive(item.href)
 						? 'bg-white/10 text-white border-r-2 border-amber-400'
 						: 'text-blue-200/70 hover:bg-white/5 hover:text-white'}"
-					on:click={() => (sidebarOpen = false)}
+					onclick={() => (sidebarOpen = false)}
 				>
 					<span class="text-base">{item.icon}</span>
 					<span>{item.label}</span>
@@ -84,7 +85,7 @@
 				<span>กลับหน้าผู้ตรวจ</span>
 			</a>
 			<button
-				on:click={handleLogout}
+				onclick={handleLogout}
 				class="flex items-center gap-2 text-sm text-red-300/60 hover:text-red-300 transition-colors w-full"
 			>
 				<span>🚪</span>
@@ -98,7 +99,7 @@
 		<!-- Top bar (mobile) -->
 		<header class="lg:hidden sticky top-0 z-30 bg-primary-dark text-white px-4 py-3 flex items-center gap-3 shadow-md">
 			<button
-				on:click={() => (sidebarOpen = !sidebarOpen)}
+				onclick={() => (sidebarOpen = !sidebarOpen)}
 				class="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
 				aria-label="เปิดเมนู"
 			>
@@ -110,7 +111,7 @@
 		</header>
 
 		<main class="p-4 sm:p-6 lg:p-8">
-			<slot />
+			{@render children()}
 		</main>
 	</div>
 </div>

@@ -4,17 +4,17 @@
 	import type { PageData } from './$types';
 	import type { Department } from '$lib/db/schema';
 
-	export let data: PageData;
+	let { data } = $props();
 
-	$: inspectionList = data.inspections;
-	$: departmentsList = data.departments as Department[];
-	$: pagination = data.pagination;
+	let inspectionList = $derived(data.inspections);
+	let departmentsList = $derived(data.departments as Department[]);
+	let pagination = $derived(data.pagination);
 
-	let search = data.filters?.search || '';
-	let filterDept = data.filters?.departmentId || '';
-	let filterMonth = data.filters?.month || '';
-	let filterYear = data.filters?.year || '';
-	let filterStatus = data.filters?.overallStatus || '';
+	let search = $state(data.filters?.search || '');
+	let filterDept = $state(data.filters?.departmentId || '');
+	let filterMonth = $state(data.filters?.month || '');
+	let filterYear = $state(data.filters?.year || '');
+	let filterStatus = $state(data.filters?.overallStatus || '');
 
 	const currentYear = new Date().getFullYear();
 
@@ -59,36 +59,36 @@
 			<input
 				type="text"
 				bind:value={search}
-				on:keydown={(e) => e.key === 'Enter' && handleFilter()}
+				onkeydown={(e) => e.key === 'Enter' && handleFilter()}
 				placeholder="ค้นหาผู้ตรวจ/รหัส..."
 				class="col-span-2 sm:col-span-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent"
 			/>
-			<select bind:value={filterDept} on:change={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+			<select bind:value={filterDept} onchange={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
 				<option value="">ทุกสังกัด</option>
 				{#each departmentsList as dept}
 					<option value={dept.id}>{dept.name}</option>
 				{/each}
 			</select>
-			<select bind:value={filterMonth} on:change={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+			<select bind:value={filterMonth} onchange={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
 				<option value="">ทุกเดือน</option>
 				{#each thaiMonths as m, i}
 					<option value={i + 1}>{m}</option>
 				{/each}
 			</select>
-			<select bind:value={filterYear} on:change={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+			<select bind:value={filterYear} onchange={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
 				<option value="">ทุกปี</option>
 				{#each [currentYear, currentYear - 1, currentYear - 2] as y}
 					<option value={y}>{y + 543}</option>
 				{/each}
 			</select>
-			<select bind:value={filterStatus} on:change={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+			<select bind:value={filterStatus} onchange={handleFilter} class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
 				<option value="">ทุกสถานะ</option>
 				<option value="ใช้งานได้">ใช้งานได้</option>
 				<option value="ซ่อมแซม">ซ่อมแซม</option>
 				<option value="รอจำหน่าย">รอจำหน่าย</option>
 			</select>
 			<button
-				on:click={handleFilter}
+				onclick={handleFilter}
 				class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
 			>
 				🔍 ค้นหา
@@ -156,7 +156,7 @@
 					<div class="flex gap-1">
 						{#each Array(pagination.totalPages) as _, i}
 							<button
-								on:click={() => goToPage(i + 1)}
+								onclick={() => goToPage(i + 1)}
 								class="px-3 py-1 rounded text-xs transition-colors
 								{pagination.page === i + 1 ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}"
 							>
