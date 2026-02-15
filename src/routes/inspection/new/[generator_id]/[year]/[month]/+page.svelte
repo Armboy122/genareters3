@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import Button from '$lib/components/Button.svelte';
 
 	$: ({ generator, formTemplate, groupedItems, existingInspection, previousMonthInspection, year, month } = $page.data);
 
@@ -198,9 +199,14 @@
 					type="button"
 					on:click={loadPreviousMonth}
 					disabled={loadingPrevious}
-					class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+					class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
 				>
-					{loadingPrevious ? 'กำลังดึง...' : '📥 ดึงข้อมูลเดือนก่อน'}
+					{#if loadingPrevious}
+						<span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+						กำลังดึง...
+					{:else}
+						📥 ดึงข้อมูลเดือนก่อน
+					{/if}
 				</button>
 			</div>
 		{:else if usedPreviousMonth}
@@ -375,14 +381,15 @@
 
 		<!-- Submit Buttons -->
 		<div class="flex gap-4">
-			<button
+			<Button
 				type="button"
-				on:click={handleSubmit}
-				disabled={isSubmitting}
-				class="flex-1 px-6 py-4 gradient-bg text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10"
+				size="lg"
+				class="flex-1"
+				loading={isSubmitting}
+				onclick={handleSubmit}
 			>
 				{isSubmitting ? 'กำลังบันทึก...' : '💾 บันทึกข้อมูล'}
-			</button>
+			</Button>
 			<a
 				href="/department/{generator.department.id}/month/{year}/{month}"
 				class="flex-1 px-6 py-4 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors text-center"

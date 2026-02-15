@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
 	import type { Department } from '$lib/db/schema';
+	import Button from '$lib/components/Button.svelte';
 
 	type DepartmentWithCount = Department & { generatorCount: number };
 
@@ -13,6 +14,8 @@
 	let formName = '';
 	let saving = false;
 	let errorMessage = '';
+	let deleting = false;
+	let toggling: string | null = null;
 
 	$: departments = data.departments as DepartmentWithCount[];
 
@@ -105,34 +108,39 @@
 								</td>
 								<td class="px-4 py-3 text-right">
 									<button
-										on:click={() => openEdit(dept)}
-										class="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors mr-1"
+									 on:click={() => openEdit(dept)}
+									 class="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors mr-1"
 									>
-										แก้ไข
+									 แก้ไข
 									</button>
 									<form
-										method="POST"
-										action="?/delete"
-										use:enhance={() => {
-											if (!confirm(`ยืนยันลบสังกัด "${dept.name}" ?`)) {
-												return () => {};
-											}
-											return async ({ result, update }) => {
-												if (result.type === 'failure') {
-													alert(result.data?.error || 'ไม่สามารถลบได้');
-												}
-												await update();
-											};
-										}}
-										class="inline"
+									 method="POST"
+									 action="?/delete"
+									 use:enhance={() => {
+									  deleting = dept.id;
+									  if (!confirm(`ยืนยันลบสังกัด "${dept.name}" ?`)) {
+									  deleting = false;
+									  return () => {};
+									  }
+									  return async ({ result, update }) => {
+									   deleting = false;
+									   if (result.type === 'failure') {
+									  alert(result.data?.error || 'ไม่สามารถลบได้');
+									 }
+									 await update();
+									};
+									 }}
+									 class="inline"
 									>
-										<input type="hidden" name="id" value={dept.id} />
-										<button
-											type="submit"
-											class="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-										>
-											ลบ
-										</button>
+									 <input type="hidden" name="id" value={dept.id} />
+									 <Button
+									 type="submit"
+									variant="danger"
+									size="sm"
+									loading={deleting === dept.id}
+									>
+									ลบ
+									</Button>
 									</form>
 								</td>
 							</tr>
@@ -197,20 +205,19 @@
 					/>
 				</div>
 				<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
-					<button
+					<Button
 						type="button"
-						on:click={() => (showModal = false)}
-						class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+						variant="secondary"
+						onclick={() => (showModal = false)}
 					>
 						ยกเลิก
-					</button>
-					<button
+					</Button>
+					<Button
 						type="submit"
-						disabled={saving}
-						class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10"
+						loading={saving}
 					>
 						{saving ? 'กำลังบันทึก...' : 'บันทึก'}
-					</button>
+					</Button>
 				</div>
 			</form>
 		</div>

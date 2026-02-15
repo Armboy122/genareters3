@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import type { Department, FormTemplate } from '$lib/db/schema';
+	import Button from '$lib/components/Button.svelte';
 
 	export let data: PageData;
 
@@ -203,17 +204,29 @@
 										แก้ไข
 									</button>
 									<form method="POST" action="?/toggleActive" use:enhance={() => {
+									togglingId = gen.id;
 									const newStatus = !gen.isActive;
-									if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานเครื่อง "${gen.assetId}" ?`)) return () => {};
-									return async ({ update }) => { await update(); };
-								}} class="inline">
-									<input type="hidden" name="id" value={gen.id} />
-									<input type="hidden" name="isActive" value={String(!gen.isActive)} />
-									<button type="submit" class="px-2 py-1 text-xs rounded transition-colors
-										{gen.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}">
-										{gen.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-									</button>
-								</form>
+									if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานเครื่อง "${gen.assetId}" ?`)) {
+									  togglingId = null;
+									 return () => {};
+									}
+									return async ({ update }) => {
+									togglingId = null;
+									await update();
+									};
+									}} class="inline">
+												<input type="hidden" name="id" value={gen.id} />
+												<input type="hidden" name="isActive" value={String(!gen.isActive)} />
+												<Button
+													type="submit"
+													variant={gen.isActive ? 'danger' : 'secondary'}
+													size="sm"
+													loading={togglingId === gen.id}
+													class={gen.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}
+												>
+													{gen.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+												</Button>
+											</form>
 								</td>
 							</tr>
 						{/each}
@@ -357,13 +370,19 @@
 					</div>
 				</div>
 				<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
-					<button type="button" on:click={() => (showModal = false)} class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+					<Button
+						type="button"
+						variant="secondary"
+						onclick={() => (showModal = false)}
+					>
 						ยกเลิก
-					</button>
-					<button type="submit" disabled={saving}
-						class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10">
+					</Button>
+					<Button
+						type="submit"
+						loading={saving}
+					>
 						{saving ? 'กำลังบันทึก...' : 'บันทึก'}
-					</button>
+					</Button>
 				</div>
 			</form>
 		</div>

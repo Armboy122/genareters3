@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
 	import type { Department, UserRole } from '$lib/db/schema';
+	import Button from '$lib/components/Button.svelte';
 
 	export let data: PageData;
 
@@ -32,6 +33,8 @@
 		role: 'inspector' as UserRole,
 		departmentId: ''
 	};
+	let deletingId: string | null = null;
+	let togglingId: string | null = null;
 
 	const roleLabels: Record<UserRole, string> = {
 		admin: 'ผู้ดูแลระบบ',
@@ -138,17 +141,29 @@
 										แก้ไข
 									</button>
 									<form method="POST" action="?/toggleActive" use:enhance={() => {
+									togglingId = user.id;
 									const newStatus = !user.isActive;
-									if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานผู้ใช้ "${user.displayName}" ?`)) return () => {};
-									return async ({ update }) => { await update(); };
-								}} class="inline">
-									<input type="hidden" name="id" value={user.id} />
-									<input type="hidden" name="isActive" value={String(!user.isActive)} />
-									<button type="submit" class="px-3 py-1.5 text-xs rounded-lg transition-colors
-										{user.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}">
-										{user.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-									</button>
-								</form>
+									if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานผู้ใช้ "${user.displayName}" ?`)) {
+									  togglingId = null;
+									 return () => {};
+									}
+									return async ({ update }) => {
+									togglingId = null;
+									await update();
+									};
+									}} class="inline">
+										<input type="hidden" name="id" value={user.id} />
+										<input type="hidden" name="isActive" value={String(!user.isActive)} />
+										<Button
+											type="submit"
+											variant={user.isActive ? 'danger' : 'secondary'}
+											size="sm"
+											loading={togglingId === user.id}
+											class={user.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}
+										>
+											{user.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+										</Button>
+									</form>
 								</td>
 							</tr>
 						{/each}
@@ -242,13 +257,19 @@
 					</div>
 				</div>
 				<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
-					<button type="button" on:click={() => (showModal = false)} class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+					<Button
+						type="button"
+						variant="secondary"
+						onclick={() => (showModal = false)}
+					>
 						ยกเลิก
-					</button>
-					<button type="submit" disabled={saving}
-						class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10">
+					</Button>
+					<Button
+						type="submit"
+						loading={saving}
+					>
 						{saving ? 'กำลังบันทึก...' : 'บันทึก'}
-					</button>
+					</Button>
 				</div>
 			</form>
 		</div>

@@ -31,26 +31,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// Protect /dashboard route - require login
-	if (event.url.pathname.startsWith('/dashboard')) {
-		if (!event.locals.user) {
-			throw redirect(302, '/login?redirect=' + encodeURIComponent(event.url.pathname));
-		}
-	}
-
-	// Protect /department routes - require login
-	if (event.url.pathname.startsWith('/department')) {
-		if (!event.locals.user) {
-			throw redirect(302, '/login?redirect=' + encodeURIComponent(event.url.pathname));
-		}
-	}
-
-	// Protect /inspection routes - require login
-	if (event.url.pathname.startsWith('/inspection')) {
-		if (!event.locals.user) {
-			throw redirect(302, '/login?redirect=' + encodeURIComponent(event.url.pathname));
-		}
-	}
-
 	return resolve(event);
 };

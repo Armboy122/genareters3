@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
+	import Button from '$lib/components/Button.svelte';
 
 	export let data: PageData;
 
@@ -20,6 +21,8 @@
 	let errorMessage = '';
 	let formName = '';
 	let formDescription = '';
+	let duplicatingId: string | null = null;
+	let togglingId: string | null = null;
 
 	$: templates = data.templates as FormTemplateWithStats[];
 
@@ -98,26 +101,50 @@
 							แก้ไขชื่อ
 						</button>
 						<form method="POST" action="?/duplicate" use:enhance={() => {
-							if (!confirm(`ทำสำเนาแบบฟอร์ม "${tmpl.name}" ?`)) return () => {};
-							return async ({ update }) => { await update(); };
-						}} class="inline">
-							<input type="hidden" name="id" value={tmpl.id} />
-							<button type="submit" class="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors">
-								ทำสำเนา
-							</button>
-						</form>
+						duplicatingId = tmpl.id;
+						if (!confirm(`ทำสำเนาแบบฟอร์ม "${tmpl.name}" ?`)) {
+						  duplicatingId = null;
+						 return () => {};
+						}
+						return async ({ update }) => {
+						 duplicatingId = null;
+						  await update();
+										};
+									}} class="inline">
+										<input type="hidden" name="id" value={tmpl.id} />
+										<Button
+											type="submit"
+											size="sm"
+											loading={duplicatingId === tmpl.id}
+											class="bg-purple-50 text-purple-700 hover:bg-purple-100"
+										>
+											ทำสำเนา
+										</Button>
+									</form>
 						<form method="POST" action="?/toggleActive" use:enhance={() => {
-							const newStatus = !tmpl.isActive;
-							if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานแบบฟอร์ม "${tmpl.name}" ?`)) return () => {};
-							return async ({ update }) => { await update(); };
+						togglingId = tmpl.id;
+						const newStatus = !tmpl.isActive;
+						if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานแบบฟอร์ม "${tmpl.name}" ?`)) {
+						  togglingId = null;
+						 return () => {};
+						}
+						return async ({ update }) => {
+						togglingId = null;
+						await update();
+						};
 						}} class="inline">
-							<input type="hidden" name="id" value={tmpl.id} />
-							<input type="hidden" name="isActive" value={String(!tmpl.isActive)} />
-							<button type="submit" class="px-3 py-1.5 text-xs rounded-lg transition-colors
-								{tmpl.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}">
-								{tmpl.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-							</button>
-						</form>
+										<input type="hidden" name="id" value={tmpl.id} />
+										<input type="hidden" name="isActive" value={String(!tmpl.isActive)} />
+										<Button
+											type="submit"
+											variant={tmpl.isActive ? 'danger' : 'secondary'}
+											size="sm"
+											loading={togglingId === tmpl.id}
+											class={tmpl.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}
+										>
+											{tmpl.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+										</Button>
+									</form>
 					</div>
 				</div>
 			{/each}
@@ -171,13 +198,19 @@
 					</div>
 				</div>
 				<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
-					<button type="button" on:click={() => (showModal = false)} class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+					<Button
+						type="button"
+						variant="secondary"
+						onclick={() => (showModal = false)}
+					>
 						ยกเลิก
-					</button>
-					<button type="submit" disabled={saving}
-						class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10">
+					</Button>
+					<Button
+						type="submit"
+						loading={saving}
+					>
 						{saving ? 'กำลังบันทึก...' : 'บันทึก'}
-					</button>
+					</Button>
 				</div>
 			</form>
 		</div>

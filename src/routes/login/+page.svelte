@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import Button from '$lib/components/Button.svelte';
 
 	let username = '';
 	let password = '';
@@ -85,13 +86,14 @@
 					/>
 				</div>
 
-				<button
+				<Button
 					type="submit"
-					disabled={loading}
-					class="w-full py-3 gradient-bg text-white rounded-lg font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10"
+					loading={loading}
+					size="lg"
+					class="w-full"
 				>
 					{loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
-				</button>
+				</Button>
 			</form>
 
 			<div class="mt-6 text-center">
