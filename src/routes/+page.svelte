@@ -178,7 +178,7 @@
 							<p class="text-xs text-gray-500 mt-0.5">ซ่อมแซม</p>
 						</div>
 						<div class="text-center p-3 bg-red-50 rounded-lg border border-red-100">
-							<p class="text-2xl font-bold text-red-700">{overall.disposal}</p>
+							<p class="text-2xl font-bold text-red-700">{overall.disposedCount}</p>
 							<p class="text-xs text-gray-500 mt-0.5">รอจำหน่าย</p>
 						</div>
 					</div>
@@ -316,7 +316,7 @@
 									<p class="text-[10px] text-gray-500">ซ่อมแซม</p>
 								</div>
 								<div class="bg-red-50 rounded-lg py-1.5">
-									<p class="text-sm font-semibold text-red-700">{dept.disposal}</p>
+									<p class="text-sm font-semibold text-red-700">{dept.disposedCount}</p>
 									<p class="text-[10px] text-gray-500">รอจำหน่าย</p>
 								</div>
 							</div>

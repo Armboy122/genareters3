@@ -20,6 +20,13 @@ export const load: PageServerLoad = async () => {
 				.where(and(eq(generators.departmentId, dept.id), eq(generators.isActive, true)));
 			const total = totalResult[0]?.count || 0;
 
+			// Count disposed (inactive) generators
+			const disposedResult = await db
+				.select({ count: count() })
+				.from(generators)
+				.where(and(eq(generators.departmentId, dept.id), eq(generators.isActive, false)));
+			const disposedCount = disposedResult[0]?.count || 0;
+
 			if (total === 0) {
 				return {
 					id: dept.id,
@@ -28,8 +35,9 @@ export const load: PageServerLoad = async () => {
 					working: 0,
 					repair: 0,
 					disposal: 0,
-					kpiPercent: 100,
-					kpiScore: 5,
+					disposedCount,
+					kpiPercent: disposedCount > 0 ? 0 : 100,
+					kpiScore: disposedCount > 0 ? 0 : 5,
 					inspected: 0,
 					allMonthsComplete: true,
 					incompleteMonths: [] as string[]
@@ -115,6 +123,7 @@ export const load: PageServerLoad = async () => {
 				working,
 				repair,
 				disposal,
+				disposedCount,
 				kpiPercent,
 				kpiScore,
 				inspected,
@@ -129,6 +138,7 @@ export const load: PageServerLoad = async () => {
 	const overallWorking = deptKPIs.reduce((s, d) => s + d.working, 0);
 	const overallRepair = deptKPIs.reduce((s, d) => s + d.repair, 0);
 	const overallDisposal = deptKPIs.reduce((s, d) => s + d.disposal, 0);
+	const overallDisposed = deptKPIs.reduce((s, d) => s + d.disposedCount, 0);
 	const overallInspected = deptKPIs.reduce((s, d) => s + d.inspected, 0);
 	const allComplete = deptKPIs.every((d) => d.allMonthsComplete);
 
@@ -348,6 +358,7 @@ export const load: PageServerLoad = async () => {
 			working: overallWorking,
 			repair: overallRepair,
 			disposal: overallDisposal,
+			disposedCount: overallDisposed,
 			inspected: overallInspected,
 			kpiPercent: overallKpiPercent,
 			kpiScore: overallKpiScore,

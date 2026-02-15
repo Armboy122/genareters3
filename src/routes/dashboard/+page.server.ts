@@ -100,9 +100,30 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		disposal: statusBreakdown.find((s) => s.machineStatus === 'รอจำหน่าย')?.count || 0
 	};
 
+	// Count disposed generators per department (disposed before this month)
+	const disposalByDept = await db
+		.select({
+			departmentId: generators.departmentId,
+			disposalCount: sql<number>`count(*)::int`
+		})
+		.from(generators)
+		.where(
+			sql`EXISTS (
+				SELECT 1 FROM inspections i
+				WHERE i.generator_id = ${generators.id}
+					AND i.machine_status = 'รอจำหน่าย'
+					AND (i.year * 12 + i.month) < (${year} * 12 + ${month})
+			)`
+		)
+		.groupBy(generators.departmentId);
+
+	const disposalMap = new Map(disposalByDept.map(d => [d.departmentId, d.disposalCount]));
+	const totalDisposal = disposalByDept.reduce((s, d) => s + d.disposalCount, 0);
+
 	return {
 		departments: departmentsWithStats.map((dept) => ({
 			...dept,
+			disposalCount: disposalMap.get(dept.id) || 0,
 			progress: dept.totalGenerators > 0
 				? Math.round((dept.inspectedCount / dept.totalGenerators) * 100)
 				: 0,
@@ -117,6 +138,7 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			totalGenerators,
 			totalInspected,
 			totalRemaining: totalGenerators - totalInspected,
+			totalDisposal,
 			progress
 		},
 		machineStats,

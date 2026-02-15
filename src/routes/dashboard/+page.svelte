@@ -60,7 +60,7 @@
 		<!-- Overall Summary -->
 		<div class="mb-8 rounded-xl bg-white p-6 shadow-md">
 			<h3 class="text-xl font-semibold text-gray-800 mb-4">สถิติการตรวจทั้งหมด</h3>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
 				<div class="text-center p-4 bg-slate-50 rounded-lg border border-slate-100">
 					<p class="text-sm text-gray-600 mb-1">เครื่องทั้งหมด</p>
 					<p class="text-3xl font-bold text-slate-700">{summary.totalGenerators}</p>
@@ -73,6 +73,12 @@
 					<p class="text-sm text-gray-600 mb-1">ยังไม่ได้ตรวจ</p>
 					<p class="text-3xl font-bold text-orange-700">{summary.totalRemaining}</p>
 				</div>
+				{#if summary.totalDisposal > 0}
+					<div class="text-center p-4 bg-red-50 rounded-lg border border-red-100">
+						<p class="text-sm text-gray-600 mb-1">รอจำหน่าย</p>
+						<p class="text-3xl font-bold text-red-700">{summary.totalDisposal}</p>
+					</div>
+				{/if}
 				<div class="text-center p-4 bg-blue-50 rounded-lg sm:col-span-2 lg:col-span-1">
 					<p class="text-sm text-gray-600 mb-1">ความคืบหน้า</p>
 					<div class="flex items-center justify-center gap-4">
@@ -176,6 +182,12 @@
 							<span class="text-gray-600">ยังไม่ได้ตรวจ</span>
 							<span class="font-semibold text-orange-600">{dept.totalGenerators - dept.inspectedCount}</span>
 						</div>
+						{#if dept.disposalCount > 0}
+							<div class="flex justify-between text-sm">
+								<span class="text-gray-600">รอจำหน่าย</span>
+								<span class="font-semibold text-red-600">{dept.disposalCount} เครื่อง</span>
+							</div>
+						{/if}
 						<div class="mt-4">
 							<div class="flex justify-between text-sm mb-1">
 								<span class="text-gray-600">ความคืบหน้า</span>
