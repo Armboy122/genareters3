@@ -6,7 +6,7 @@
 
 	let formData = {
 		inspectorName: '',
-		items: {} as Record<string, { status: 'ปกติ' | 'ไม่ปกติ'; remark: string }>,
+		items: {} as Record<string, { status: string; remark: string }>,
 		overallRemark: ''
 	};
 
@@ -14,23 +14,20 @@
 	let isSubmitting = false;
 	let initialized = false;
 	let usedPreviousMonth = false;
+	let loadingPrevious = false;
 
-	// Initialize form data once from existing inspection, previous month, or default to "ปกติ"
+	// Initialize form data: existing inspection gets pre-filled, new inspection starts EMPTY
 	$: if (!initialized && (existingInspection || groupedItems)) {
 		initialized = true;
 		if (existingInspection) {
+			// Edit mode: fill from existing data
 			formData.inspectorName = existingInspection.inspectorName;
 			formData.overallRemark = existingInspection.overallRemark || '';
-			// First set defaults for all template items
 			for (const category in groupedItems) {
 				for (const item of groupedItems[category]) {
-					formData.items[item.itemCode] = {
-						status: 'ปกติ',
-						remark: ''
-					};
+					formData.items[item.itemCode] = { status: '', remark: '' };
 				}
 			}
-			// Then override with existing inspection data
 			for (const detail of existingInspection.details) {
 				formData.items[detail.itemCode] = {
 					status: detail.status,
@@ -38,47 +35,59 @@
 				};
 			}
 		} else if (groupedItems) {
-			// First set defaults for all template items
+			// New inspection: all items start with NO status selected
 			for (const category in groupedItems) {
 				for (const item of groupedItems[category]) {
-					formData.items[item.itemCode] = {
-						status: 'ปกติ',
-						remark: ''
-					};
-				}
-			}
-			// If previous month inspection exists, pre-fill from it
-			if (previousMonthInspection) {
-				usedPreviousMonth = true;
-				formData.inspectorName = previousMonthInspection.inspectorName;
-				for (const detail of previousMonthInspection.details) {
-					if (formData.items[detail.itemCode]) {
-						formData.items[detail.itemCode] = {
-							status: detail.status,
-							remark: detail.remark || ''
-						};
-					}
+					formData.items[item.itemCode] = { status: '', remark: '' };
 				}
 			}
 		}
-		formData = formData; // trigger reactivity
+		formData = formData;
 	}
 
 	// Calculate summary
 	$: normalCount = Object.values(formData.items).filter((i) => i.status === 'ปกติ').length;
 	$: abnormalCount = Object.values(formData.items).filter((i) => i.status === 'ไม่ปกติ').length;
+	$: unselectedCount = Object.values(formData.items).filter((i) => !i.status).length;
+	$: totalItems = Object.keys(formData.items).length;
+	$: hasPreviousData = !!previousMonthInspection;
+
+	function loadPreviousMonth() {
+		if (!previousMonthInspection) return;
+		loadingPrevious = true;
+		usedPreviousMonth = true;
+		formData.inspectorName = formData.inspectorName || previousMonthInspection.inspectorName;
+		for (const detail of previousMonthInspection.details) {
+			if (formData.items[detail.itemCode] !== undefined) {
+				formData.items[detail.itemCode] = {
+					status: detail.status,
+					remark: detail.remark || ''
+				};
+			}
+		}
+		formData = formData;
+		loadingPrevious = false;
+	}
 
 	function selectAllNormal() {
 		for (const key in formData.items) {
 			formData.items[key].status = 'ปกติ';
 		}
-		formData = formData; // trigger reactivity
+		formData = formData;
 	}
 
 	function selectAllAbnormal() {
 		for (const key in formData.items) {
 			formData.items[key].status = 'ไม่ปกติ';
 		}
+		formData = formData;
+	}
+
+	function clearAll() {
+		for (const key in formData.items) {
+			formData.items[key] = { status: '', remark: '' };
+		}
+		usedPreviousMonth = false;
 		formData = formData;
 	}
 
@@ -92,6 +101,12 @@
 
 		if (!formData.inspectorName.trim()) {
 			errorMessage = 'กรุณาระบุชื่อผู้ตรวจ';
+			return;
+		}
+
+		// Validate all items have a status selected
+		if (unselectedCount > 0) {
+			errorMessage = `ยังมี ${unselectedCount} รายการที่ยังไม่ได้เลือกสถานะ กรุณาเลือกให้ครบทุกรายการ`;
 			return;
 		}
 
@@ -109,7 +124,6 @@
 		isSubmitting = true;
 
 		try {
-			const url = existingInspection ? '/api/inspections' : '/api/inspections';
 			const method = existingInspection ? 'PUT' : 'POST';
 
 			const payload = existingInspection
@@ -128,7 +142,7 @@
 						overallRemark: formData.overallRemark
 					};
 
-			const response = await fetch(url, {
+			const response = await fetch('/api/inspections', {
 				method,
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(payload)
@@ -152,35 +166,59 @@
 <div class="min-h-screen">
 	<!-- Header -->
 	<header class="gradient-bg text-white shadow-lg">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 relative z-10">
-			<div class="flex items-center justify-between">
-				<div>
-					<h1 class="text-2xl font-bold tracking-tight">
-						{existingInspection ? 'แก้ไขข้อมูลการตรวจ' : 'บันทึกข้อมูลการตรวจ'}
-					</h1>
-					<p class="text-blue-200/70 text-sm">
-						{generator.assetId} | {generator.type} | {generator.sizeKw} kW | {generator.product || '-'}
-					</p>
-				</div>
-				<a
-					href="/department/{generator.department.id}/month/{year}/{month}"
-					class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-white"
-				>
-					← กลับรายการเครื่อง
-				</a>
+		<div class="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8 relative z-10">
+			<div class="flex items-center gap-2 text-blue-200/60 text-sm mb-1">
+				<a href="/department/{generator.department.id}/calendar" class="hover:text-white transition-colors">{generator.department.name}</a>
+				<span>/</span>
+				<a href="/department/{generator.department.id}/month/{year}/{month}" class="hover:text-white transition-colors">รายการเครื่อง</a>
+				<span>/</span>
+				<span class="text-white">ตรวจ</span>
 			</div>
+			<h1 class="text-2xl font-bold tracking-tight">
+				{existingInspection ? 'แก้ไขข้อมูลการตรวจ' : 'บันทึกข้อมูลการตรวจ'}
+			</h1>
+			<p class="text-blue-200/70 text-sm mt-0.5">
+				{generator.assetId} | {generator.type} | {generator.sizeKw} kW | {generator.product || '-'}
+			</p>
 		</div>
 	</header>
 
 	<main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-		<!-- Previous Month Pre-fill Notice -->
-		{#if usedPreviousMonth}
-			<div class="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg flex items-center gap-3">
-				<span class="text-xl">📋</span>
-				<div>
-					<p class="font-semibold">ดึงข้อมูลจากเดือนที่แล้วมาแล้ว</p>
-					<p class="text-sm">ข้อมูลการตรวจถูกดึงมาจากประวัติเดือนก่อนหน้า กรุณาตรวจสอบและแก้ไขก่อนบันทึก</p>
+		<!-- Previous Month Button / Notice -->
+		{#if !existingInspection && hasPreviousData && !usedPreviousMonth}
+			<div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+				<div class="flex items-center gap-3">
+					<span class="text-xl">📋</span>
+					<div>
+						<p class="font-semibold text-blue-800">มีข้อมูลเดือนก่อนหน้า</p>
+						<p class="text-sm text-blue-600">กดปุ่มเพื่อดึงข้อมูลจากเดือนที่แล้วมาช่วยกรอก</p>
+					</div>
 				</div>
+				<button
+					type="button"
+					on:click={loadPreviousMonth}
+					disabled={loadingPrevious}
+					class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+				>
+					{loadingPrevious ? 'กำลังดึง...' : '📥 ดึงข้อมูลเดือนก่อน'}
+				</button>
+			</div>
+		{:else if usedPreviousMonth}
+			<div class="mb-6 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg flex items-center justify-between gap-3">
+				<div class="flex items-center gap-3">
+					<span class="text-xl">✅</span>
+					<div>
+						<p class="font-semibold">ดึงข้อมูลจากเดือนที่แล้วมาแล้ว</p>
+						<p class="text-sm">กรุณาตรวจสอบและแก้ไขก่อนบันทึก</p>
+					</div>
+				</div>
+				<button
+					type="button"
+					on:click={clearAll}
+					class="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-xs"
+				>
+					ล้างทั้งหมด
+				</button>
 			</div>
 		{/if}
 
@@ -206,22 +244,37 @@
 		</div>
 
 		<!-- Quick Select Buttons -->
-		<div class="mb-6 flex gap-2">
+		<div class="mb-6 flex flex-wrap gap-2">
 			<button
 				type="button"
 				on:click={selectAllNormal}
-				class="flex-1 px-4 py-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+				class="flex-1 min-w-[140px] px-4 py-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
 			>
 				✅ เลือกปกติทั้งหมด
 			</button>
 			<button
 				type="button"
 				on:click={selectAllAbnormal}
-				class="flex-1 px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+				class="flex-1 min-w-[140px] px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
 			>
 				❌ เลือกไม่ปกติทั้งหมด
 			</button>
+			<button
+				type="button"
+				on:click={clearAll}
+				class="px-4 py-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+			>
+				🗑️ ล้าง
+			</button>
 		</div>
+
+		<!-- Progress indicator -->
+		{#if unselectedCount > 0}
+			<div class="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-center justify-between">
+				<span>⚠️ ยังเหลืออีก {unselectedCount} จาก {totalItems} รายการที่ยังไม่ได้เลือก</span>
+				<span class="text-xs text-amber-600">{Math.round(((totalItems - unselectedCount) / totalItems) * 100)}%</span>
+			</div>
+		{/if}
 
 		<!-- Inspection Items -->
 		{#each Object.keys(groupedItems) as category}
@@ -229,7 +282,8 @@
 				<h2 class="text-lg font-semibold text-slate-700 mb-4">{category}</h2>
 
 				{#each groupedItems[category] as item}
-					<div class="border-b border-gray-100 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0">
+					<div class="border-b border-gray-100 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0
+						{formData.items[item.itemCode] && !formData.items[item.itemCode].status ? 'bg-amber-50/50 -mx-3 px-3 rounded-lg' : ''}">
 						<div class="flex items-start gap-2 mb-3">
 							<span class="text-sm font-medium text-slate-500 font-mono shrink-0">{item.itemCode}</span>
 							<span class="text-gray-700">{item.description}</span>
@@ -262,6 +316,9 @@
 									/>
 									<span class="text-sm text-red-700">ไม่ปกติ</span>
 								</label>
+								{#if !formData.items[item.itemCode].status}
+									<span class="text-xs text-amber-500 ml-2">← ยังไม่ได้เลือก</span>
+								{/if}
 							</div>
 
 							{#if formData.items[item.itemCode].status === 'ไม่ปกติ'}
@@ -287,14 +344,18 @@
 		<!-- Summary & Overall Remark -->
 		<div class="mb-6 bg-white rounded-xl shadow-md p-6">
 			<h2 class="text-lg font-semibold text-gray-800 mb-4">สรุปและหมายเหตุรวม</h2>
-			<div class="grid grid-cols-2 gap-4 mb-4">
-				<div class="text-center p-4 bg-green-50 rounded-lg">
+			<div class="grid grid-cols-3 gap-4 mb-4">
+				<div class="text-center p-4 bg-green-50 rounded-lg border border-green-100">
 					<p class="text-2xl font-bold text-green-700">{normalCount}</p>
 					<p class="text-sm text-gray-600">ปกติ</p>
 				</div>
-				<div class="text-center p-4 bg-red-50 rounded-lg">
+				<div class="text-center p-4 bg-red-50 rounded-lg border border-red-100">
 					<p class="text-2xl font-bold text-red-700">{abnormalCount}</p>
 					<p class="text-sm text-gray-600">ไม่ปกติ</p>
+				</div>
+				<div class="text-center p-4 rounded-lg border {unselectedCount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100'}">
+					<p class="text-2xl font-bold {unselectedCount > 0 ? 'text-amber-600' : 'text-gray-400'}">{unselectedCount}</p>
+					<p class="text-sm text-gray-600">ยังไม่เลือก</p>
 				</div>
 			</div>
 
@@ -318,7 +379,7 @@
 				type="button"
 				on:click={handleSubmit}
 				disabled={isSubmitting}
-				class="flex-1 px-6 py-4 gradient-bg text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+				class="flex-1 px-6 py-4 gradient-bg text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10"
 			>
 				{isSubmitting ? 'กำลังบันทึก...' : '💾 บันทึกข้อมูล'}
 			</button>

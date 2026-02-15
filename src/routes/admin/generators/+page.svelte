@@ -27,6 +27,21 @@
 		formTemplateId: ''
 	};
 
+	let deptSearch = '';
+	let showDeptDropdown = false;
+
+	$: filteredDeptsList = departmentsList.filter((d: any) =>
+		d.name.toLowerCase().includes(deptSearch.toLowerCase())
+	);
+
+	$: selectedDeptName = departmentsList.find((d: any) => d.id === form.departmentId)?.name || '';
+
+	function selectDept(dept: any) {
+		form.departmentId = dept.id;
+		deptSearch = dept.name;
+		showDeptDropdown = false;
+	}
+
 	const generatorTypes = ['สำนักงาน', 'ฉุกเฉิน 3 จ. 4 อ.', 'รถโมบายล์', 'โรงจักร', 'พระตำหนักฯ'];
 
 	async function loadGenerators() {
@@ -67,6 +82,7 @@
 	function openCreate() {
 		editingGen = null;
 		form = { assetId: '', type: '', sizeKw: '', product: '', location: '', departmentId: '', formTemplateId: '' };
+		deptSearch = '';
 		errorMessage = '';
 		showModal = true;
 	}
@@ -82,6 +98,7 @@
 			departmentId: gen.departmentId,
 			formTemplateId: gen.formTemplateId || ''
 		};
+		deptSearch = gen.departmentName || '';
 		errorMessage = '';
 		showModal = true;
 	}
@@ -320,14 +337,36 @@
 						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
 				</div>
 
-				<div>
+				<div class="relative">
 					<label class="block text-sm font-medium text-gray-700 mb-1">สังกัด *</label>
-					<select bind:value={form.departmentId} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-						<option value="">เลือกสังกัด</option>
-						{#each departmentsList as dept}
-							<option value={dept.id}>{dept.name}</option>
-						{/each}
-					</select>
+					<input
+						type="text"
+						bind:value={deptSearch}
+						on:focus={() => (showDeptDropdown = true)}
+						on:input={() => { showDeptDropdown = true; form.departmentId = ''; }}
+						placeholder="พิมพ์เพื่อค้นหาสังกัด / การไฟฟ้า..."
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light"
+					/>
+					{#if form.departmentId}
+						<span class="absolute right-3 top-[2.1rem] text-green-500 text-sm">✓</span>
+					{/if}
+					{#if showDeptDropdown && filteredDeptsList.length > 0}
+						<div class="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+							{#each filteredDeptsList as dept}
+								<button
+									type="button"
+									on:click={() => selectDept(dept)}
+									class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors {form.departmentId === dept.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}"
+								>
+									{dept.name}
+								</button>
+							{/each}
+						</div>
+					{:else if showDeptDropdown && deptSearch && filteredDeptsList.length === 0}
+						<div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-400">
+							ไม่พบสังกัด "{deptSearch}"
+						</div>
+					{/if}
 				</div>
 
 				<div>

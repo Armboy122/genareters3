@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		.select({ count: count() })
 		.from(generators)
 		.where(eq(generators.departmentId, departmentId));
-	const totalGenerators = totalResult[0]?.count || 0;
+	const totalGenerators = Number(totalResult[0]?.count) || 0;
 
 	// Get inspections per month for this department in the given year
 	const monthlyInspections = await db
@@ -48,12 +48,12 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		.orderBy(inspections.month);
 
 	// Create map for quick lookup
-	const inspectionMap = new Map(monthlyInspections.map((s) => [s.month, s.inspectedCount]));
+	const inspectionMap = new Map(monthlyInspections.map((s) => [s.month, Number(s.inspectedCount)]));
 
 	// Build calendar data for all 12 months
 	const calendar = Array.from({ length: 12 }, (_, i) => {
 		const month = i + 1;
-		const inspected = inspectionMap.get(month) || 0;
+		const inspected = Number(inspectionMap.get(month)) || 0;
 		const progress = totalGenerators > 0 ? Math.round((inspected / totalGenerators) * 100) : 0;
 
 		let statusColor = 'bg-gray-100 text-gray-700';

@@ -10,11 +10,14 @@
 	let saving = false;
 	let errorMessage = '';
 
+	// Instant client-side filtering
+	$: filteredDepts = departments.filter((dept) =>
+		dept.name.toLowerCase().includes(search.toLowerCase())
+	);
+
 	async function loadDepartments() {
 		loading = true;
-		const params = new URLSearchParams();
-		if (search) params.set('search', search);
-		const res = await fetch(`/api/admin/departments?${params}`);
+		const res = await fetch('/api/admin/departments');
 		const data = await res.json();
 		if (data.success) departments = data.data;
 		loading = false;
@@ -80,17 +83,13 @@
 			alert(data.message || 'ไม่สามารถลบได้');
 		}
 	}
-
-	function handleSearch() {
-		loadDepartments();
-	}
 </script>
 
 <div>
 	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 		<div>
 			<h1 class="text-2xl font-bold text-gray-900">จัดการสังกัด</h1>
-			<p class="text-gray-500 text-sm mt-1">เพิ่ม แก้ไข หรือลบสังกัด/การไฟฟ้า</p>
+			<p class="text-gray-500 text-sm mt-1">เพิ่ม แก้ไข หรือลบสังกัด/การไฟฟ้า — ทั้งหมด {departments.length} สังกัด</p>
 		</div>
 		<button
 			on:click={openCreate}
@@ -100,44 +99,53 @@
 		</button>
 	</div>
 
-	<!-- Search -->
+	<!-- Search (instant filter) -->
 	<div class="mb-6">
-		<div class="flex gap-2">
+		<div class="relative">
+			<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
 			<input
 				type="text"
 				bind:value={search}
-				on:keydown={(e) => e.key === 'Enter' && handleSearch()}
-				placeholder="ค้นหาสังกัด..."
-				class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent"
+				placeholder="พิมพ์เพื่อค้นหาสังกัด / การไฟฟ้า... (กรองทันที)"
+				class="w-full rounded-lg border border-gray-300 pl-9 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent"
 			/>
-			<button
-				on:click={handleSearch}
-				class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
-			>
-				🔍 ค้นหา
-			</button>
+			{#if search}
+				<button
+					on:click={() => (search = '')}
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+				>✕</button>
+			{/if}
 		</div>
+		{#if search}
+			<p class="mt-2 text-xs text-gray-500">พบ {filteredDepts.length} จาก {departments.length} สังกัด</p>
+		{/if}
 	</div>
 
 	<!-- Table -->
 	<div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
 		{#if loading}
 			<div class="p-12 text-center text-gray-400">กำลังโหลด...</div>
-		{:else if departments.length === 0}
-			<div class="p-12 text-center text-gray-400">ไม่พบข้อมูลสังกัด</div>
+		{:else if filteredDepts.length === 0}
+			<div class="p-12 text-center text-gray-400">
+				{#if search}
+					ไม่พบสังกัดที่ค้นหา "{search}"
+				{:else}
+					ไม่พบข้อมูลสังกัด
+				{/if}
+			</div>
 		{:else}
 			<div class="overflow-x-auto">
 				<table class="w-full text-sm">
 					<thead class="bg-gray-50 text-gray-600">
 						<tr>
-							<th class="text-left px-4 py-3 font-medium">#</th>
+							<th class="text-left px-4 py-3 font-medium w-12">#</th>
 							<th class="text-left px-4 py-3 font-medium">ชื่อสังกัด</th>
-							<th class="text-left px-4 py-3 font-medium">จำนวนเครื่อง</th>
-							<th class="text-right px-4 py-3 font-medium">จัดการ</th>
+							<th class="text-left px-4 py-3 font-medium w-32">จำนวนเครื่อง</th>
+							<th class="text-right px-4 py-3 font-medium w-40">จัดการ</th>
 						</tr>
 					</thead>
 					<tbody>
-						{#each departments as dept, i}
+						{#each filteredDepts as dept, i}
 							<tr class="border-t border-gray-50 hover:bg-gray-50/50">
 								<td class="px-4 py-3 text-gray-400">{i + 1}</td>
 								<td class="px-4 py-3 font-medium text-gray-800">{dept.name}</td>
@@ -166,7 +174,11 @@
 				</table>
 			</div>
 			<div class="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-				ทั้งหมด {departments.length} สังกัด
+				{#if search}
+					แสดง {filteredDepts.length} จาก {departments.length} สังกัด
+				{:else}
+					ทั้งหมด {departments.length} สังกัด
+				{/if}
 			</div>
 		{/if}
 	</div>

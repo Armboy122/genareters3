@@ -11,12 +11,7 @@
 	let filterStatus = '';
 	let search = '';
 
-	const now = new Date();
-	const currentMonth = now.getMonth() + 1;
-	const currentYear = now.getFullYear();
-
-	filterMonth = String(currentMonth);
-	filterYear = String(currentYear);
+	const currentYear = new Date().getFullYear();
 
 	const thaiMonths = [
 		'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',

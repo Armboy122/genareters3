@@ -2,27 +2,27 @@
 	import { page } from '$app/stores';
 
 	$: ({ summary, departments, machineStats, month, year, monthName } = $page.data);
+
+	let searchQuery = '';
+
+	$: filteredDepartments = departments.filter((dept: any) =>
+		dept.name.toLowerCase().includes(searchQuery.toLowerCase())
+	);
 </script>
 
 <div class="min-h-screen">
 	<!-- Header -->
 	<header class="gradient-bg text-white shadow-lg">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 relative z-10">
+		<div class="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8 relative z-10">
 			<div class="flex items-center gap-3">
 				<div class="w-10 h-10 rounded-lg bg-amber-400/20 flex items-center justify-center">
 					<span class="text-amber-300 text-xl">⚡</span>
 				</div>
 				<div>
-					<h1 class="text-3xl font-bold tracking-tight">ระบบตรวจสภาพเครื่องกำเนิดไฟฟ้า</h1>
-					<p class="text-blue-200/70 mt-0.5 text-sm">การไฟฟ้าส่วนภูมิภาค (กฟภ.)</p>
+					<h1 class="text-2xl sm:text-3xl font-bold tracking-tight">รายงานการตรวจ</h1>
+					<p class="text-blue-200/70 mt-0.5 text-sm">ระบบตรวจสภาพเครื่องกำเนิดไฟฟ้า — การไฟฟ้าส่วนภูมิภาค (กฟภ.)</p>
 				</div>
 			</div>
-			<a
-				href="/admin"
-				class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm text-blue-100 relative z-10"
-			>
-				⚙️ Admin Panel
-			</a>
 		</div>
 	</header>
 
@@ -112,12 +112,35 @@
 		{/if}
 
 		<!-- Departments List -->
-		<div class="mb-4">
-			<h3 class="text-xl font-semibold text-gray-800">สังกัดทั้งหมด</h3>
-			<p class="text-sm text-gray-500">กดที่สังกัดเพื่อดูรายละเอียดและเริ่มตรวจ</p>
+		<div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+			<div>
+				<h3 class="text-xl font-semibold text-gray-800">สังกัดทั้งหมด</h3>
+				<p class="text-sm text-gray-500">กดที่สังกัดเพื่อดูรายละเอียดและเริ่มตรวจ</p>
+			</div>
+			<div class="relative w-full sm:w-80">
+				<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+				<input
+					type="text"
+					bind:value={searchQuery}
+					placeholder="ค้นหาสังกัด / การไฟฟ้า..."
+					class="w-full rounded-lg border border-gray-300 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent"
+				/>
+				{#if searchQuery}
+					<button
+						on:click={() => (searchQuery = '')}
+						class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+					>✕</button>
+				{/if}
+			</div>
 		</div>
+
+		{#if searchQuery && filteredDepartments.length === 0}
+			<div class="rounded-xl bg-white p-12 shadow-md text-center text-gray-400">
+				ไม่พบสังกัดที่ค้นหา "{searchQuery}"
+			</div>
+		{:else}
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			{#each departments as dept}
+			{#each filteredDepartments as dept}
 				<a
 					href="/department/{dept.id}/calendar"
 					class="block bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 border-l-4
@@ -163,5 +186,6 @@
 				</a>
 			{/each}
 		</div>
+		{/if}
 	</main>
 </div>
