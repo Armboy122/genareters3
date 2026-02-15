@@ -385,69 +385,7 @@
 			</div>
 
 			<!-- Section A: KPI Trend Chart -->
-			{#if kpiTrend && kpiTrend.length > 0}
-				<div class="mb-8 rounded-xl bg-white p-6 shadow-md">
-					<h3 class="text-lg font-semibold text-gray-800 mb-1">แนวโน้ม KPI รายเดือน</h3>
-					<p class="text-sm text-gray-500 mb-5">KPI ความพร้อมอุปกรณ์ ปี {currentYear} (ม.ค. — ปัจจุบัน)</p>
-
-					<!-- SVG Bar Chart -->
-					<div class="overflow-x-auto">
-						<div class="min-w-[500px]">
-							<svg viewBox="0 0 {kpiTrend.length * 70 + 40} 220" class="w-full h-56">
-								<!-- Grid lines -->
-								{#each [0, 25, 50, 75, 100] as line}
-									<line
-										x1="35" y1={200 - line * 1.8}
-										x2={kpiTrend.length * 70 + 35} y2={200 - line * 1.8}
-										stroke="#e5e7eb" stroke-width="1" stroke-dasharray={line === 0 ? '' : '4,4'}
-									/>
-									<text x="30" y={204 - line * 1.8} text-anchor="end" class="text-[10px] fill-gray-400">{line}%</text>
-								{/each}
-
-								<!-- Bars -->
-								{#each kpiTrend as point, i}
-									{@const barHeight = point.kpiPercent * 1.8}
-									{@const x = i * 70 + 45}
-									{@const barColor = point.kpiPercent >= 80 ? '#10b981' : point.kpiPercent >= 70 ? '#0ea5e9' : point.kpiPercent >= 60 ? '#f59e0b' : point.kpiPercent > 0 ? '#ef4444' : '#d1d5db'}
-
-									<!-- Bar -->
-									<rect
-										x={x} y={200 - barHeight}
-										width="40" height={barHeight}
-										rx="4" fill={barColor} opacity="0.85"
-									/>
-
-									<!-- Value label -->
-									{#if point.kpiPercent > 0}
-										<text x={x + 20} y={194 - barHeight} text-anchor="middle" class="text-[11px] font-semibold" fill={barColor}>
-											{point.kpiPercent}%
-										</text>
-									{/if}
-
-									<!-- Month label -->
-									<text x={x + 20} y="216" text-anchor="middle" class="text-[11px] fill-gray-500">
-										{getShortThaiMonthName(point.month)}
-									</text>
-
-									<!-- Inspected count -->
-									<text x={x + 20} y={200 - barHeight / 2 + 4} text-anchor="middle" class="text-[9px] fill-white font-medium">
-										{point.inspected}/{point.total}
-									</text>
-								{/each}
-
-								<!-- 80% threshold line -->
-								<line
-									x1="35" y1={200 - 80 * 1.8}
-									x2={kpiTrend.length * 70 + 35} y2={200 - 80 * 1.8}
-									stroke="#10b981" stroke-width="1.5" stroke-dasharray="6,3"
-								/>
-								<text x={kpiTrend.length * 70 + 38} y={204 - 80 * 1.8} class="text-[9px] fill-emerald-500">เป้า 80%</text>
-							</svg>
-						</div>
-					</div>
-				</div>
-			{/if}
-
+			
 			<!-- Section 2: Top 10 Abnormal Items by Form Template -->
 			<div class="mb-8 rounded-xl bg-white p-6 shadow-md">
 				<h3 class="text-lg font-semibold text-gray-800 mb-1">10 อันดับรายการตรวจที่ผิดปกติมากที่สุด</h3>
