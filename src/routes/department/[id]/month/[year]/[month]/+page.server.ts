@@ -26,7 +26,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		error(404, 'ไม่พบสังกัด');
 	}
 
-	// Get all generators for this department
+	// Get all active generators for this department
 	const allGenerators = await db
 		.select({
 			id: generators.id,
@@ -39,7 +39,7 @@ export const load: PageServerLoad = async ({ params }) => {
 			isActive: generators.isActive
 		})
 		.from(generators)
-		.where(eq(generators.departmentId, departmentId))
+		.where(and(eq(generators.departmentId, departmentId), eq(generators.isActive, true)))
 		.orderBy(generators.assetId);
 
 	// Get inspections for this month/year

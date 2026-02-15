@@ -144,8 +144,10 @@ export const load: PageServerLoad = async ({ params }) => {
 
 export const actions: Actions = {
 	create: async ({ request, locals, params }) => {
-		const body = await request.json();
-		const { inspectorName, items, overallRemark } = body;
+		const data = await request.formData();
+		const inspectorName = data.get('inspectorName') as string;
+		const items = JSON.parse(data.get('items') as string);
+		const overallRemark = data.get('overallRemark') as string;
 		const generatorId = params.generator_id;
 		const month = parseInt(params.month);
 		const year = parseInt(params.year);
@@ -249,6 +251,12 @@ export const actions: Actions = {
 				}))
 			);
 
+			// Update generator isActive based on machineStatus
+			await db
+				.update(generators)
+				.set({ isActive: machineStatus !== 'รอจำหน่าย', updatedAt: new Date() })
+				.where(eq(generators.id, generatorId));
+
 			return { success: true, inspectionId: newInspection[0].id };
 		} catch (err) {
 			console.error('Create inspection error:', err);
@@ -257,8 +265,11 @@ export const actions: Actions = {
 	},
 
 	update: async ({ request, locals }) => {
-		const body = await request.json();
-		const { inspectionId, inspectorName, items, overallRemark } = body;
+		const data = await request.formData();
+		const inspectionId = data.get('inspectionId') as string;
+		const inspectorName = data.get('inspectorName') as string;
+		const items = JSON.parse(data.get('items') as string);
+		const overallRemark = data.get('overallRemark') as string;
 
 		const finalInspectorName = inspectorName || locals.user?.displayName;
 
@@ -345,6 +356,12 @@ export const actions: Actions = {
 					remark: item.remark || null
 				}))
 			);
+
+			// Update generator isActive based on machineStatus
+			await db
+				.update(generators)
+				.set({ isActive: machineStatus !== 'รอจำหน่าย', updatedAt: new Date() })
+				.where(eq(generators.id, existingInspection[0].generatorId));
 
 			return { success: true };
 		} catch (err) {

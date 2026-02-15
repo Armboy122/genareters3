@@ -17,6 +17,31 @@
 	let usedPreviousMonth = false;
 	let loadingPrevious = false;
 
+	// Toast state
+	let toastMessage = '';
+	let toastType: 'success' | 'error' | 'warning' = 'success';
+	let toastVisible = false;
+	let toastTimer: ReturnType<typeof setTimeout>;
+
+	function showToast(message: string, type: 'success' | 'error' | 'warning' = 'success') {
+		clearTimeout(toastTimer);
+		toastMessage = message;
+		toastType = type;
+		toastVisible = true;
+		toastTimer = setTimeout(() => {
+			toastVisible = false;
+		}, 3500);
+	}
+
+	function scrollToElement(id: string) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			el.classList.add('ring-2', 'ring-red-400', 'ring-offset-2');
+			setTimeout(() => el.classList.remove('ring-2', 'ring-red-400', 'ring-offset-2'), 3000);
+		}
+	}
+
 	// Initialize form data: existing inspection gets pre-filled, new inspection starts EMPTY
 	$: if (!initialized && (existingInspection || groupedItems)) {
 		initialized = true;
@@ -102,19 +127,31 @@
 
 		if (!formData.inspectorName.trim()) {
 			errorMessage = 'กรุณาระบุชื่อผู้ตรวจ';
+			showToast('กรุณาระบุชื่อผู้ตรวจ', 'warning');
+			scrollToElement('inspectorName');
 			return;
 		}
 
-		// Validate all items have a status selected
+		// Validate all items have a status selected — scroll to first unselected
 		if (unselectedCount > 0) {
 			errorMessage = `ยังมี ${unselectedCount} รายการที่ยังไม่ได้เลือกสถานะ กรุณาเลือกให้ครบทุกรายการ`;
+			showToast(`ยังเหลืออีก ${unselectedCount} รายการที่ยังไม่ได้เลือก`, 'warning');
+			// Find & scroll to first unselected item
+			for (const [itemCode, item] of Object.entries(formData.items)) {
+				if (!item.status) {
+					scrollToElement(`item-${itemCode}`);
+					break;
+				}
+			}
 			return;
 		}
 
-		// Validate abnormal items have remarks
+		// Validate abnormal items have remarks — scroll to first missing remark
 		for (const [itemCode, item] of Object.entries(formData.items)) {
 			if (item.status === 'ไม่ปกติ' && !item.remark?.trim()) {
 				errorMessage = `กรุณาระบุหมายเหตุสำหรับรายการ "${itemCode}" ที่มีสถานะไม่ปกติ`;
+				showToast(`กรุณาระบุหมายเหตุรายการ ${itemCode}`, 'warning');
+				scrollToElement(`item-${itemCode}`);
 				return;
 			}
 		}
@@ -127,37 +164,37 @@
 		try {
 			const actionName = existingInspection ? 'update' : 'create';
 
-			const payload = existingInspection
-				? {
-						inspectionId: existingInspection.id,
-						inspectorName: formData.inspectorName,
-						items: formData.items,
-						overallRemark: formData.overallRemark
-					}
-				: {
-						inspectorName: formData.inspectorName,
-						items: formData.items,
-						overallRemark: formData.overallRemark
-					};
+			const submitData = new FormData();
+			submitData.append('inspectorName', formData.inspectorName);
+			submitData.append('items', JSON.stringify(formData.items));
+			submitData.append('overallRemark', formData.overallRemark);
+			if (existingInspection) {
+				submitData.append('inspectionId', existingInspection.id);
+			}
 
 			const response = await fetch(`?/${actionName}`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
+				body: submitData
 			});
 
 			const result = await response.json();
 
 			// SvelteKit action responses have a different shape
 			if (result.type === 'success') {
-				goto(`/department/${generator.department.id}/month/${year}/${month}`);
+				showToast('บันทึกข้อมูลสำเร็จ', 'success');
+				setTimeout(() => {
+					goto(`/department/${generator.department.id}/month/${year}/${month}`);
+				}, 1000);
 			} else if (result.type === 'failure') {
 				errorMessage = result.data?.error || 'บันทึกข้อมูลไม่สำเร็จ';
+				showToast(errorMessage, 'error');
 			} else {
 				errorMessage = 'บันทึกข้อมูลไม่สำเร็จ';
+				showToast(errorMessage, 'error');
 			}
 		} catch (e) {
 			errorMessage = 'เกิดข้อผิดพลาดในการบันทึก';
+			showToast('เกิดข้อผิดพลาดในการบันทึก', 'error');
 		} finally {
 			isSubmitting = false;
 		}
@@ -288,7 +325,7 @@
 				<h2 class="text-lg font-semibold text-slate-700 mb-4">{category}</h2>
 
 				{#each groupedItems[category] as item}
-					<div class="border-b border-gray-100 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0
+					<div id="item-{item.itemCode}" class="border-b border-gray-100 pb-4 mb-4 last:border-0 last:pb-0 last:mb-0 transition-all duration-300
 						{formData.items[item.itemCode] && !formData.items[item.itemCode].status ? 'bg-amber-50/50 -mx-3 px-3 rounded-lg' : ''}">
 						<div class="flex items-start gap-2 mb-3">
 							<span class="text-sm font-medium text-slate-500 font-mono shrink-0">{item.itemCode}</span>
@@ -399,3 +436,36 @@
 		</div>
 	</main>
 </div>
+
+<!-- Toast Notification -->
+{#if toastVisible}
+	<div class="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-slide-down">
+		<div class="flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg backdrop-blur-sm text-sm font-medium
+			{toastType === 'success' ? 'bg-green-600 text-white' : ''}
+			{toastType === 'error' ? 'bg-red-600 text-white' : ''}
+			{toastType === 'warning' ? 'bg-amber-500 text-white' : ''}"
+		>
+			<span class="text-lg">
+				{#if toastType === 'success'}✅{:else if toastType === 'error'}❌{:else}⚠️{/if}
+			</span>
+			<span>{toastMessage}</span>
+			<button on:click={() => toastVisible = false} class="ml-2 opacity-70 hover:opacity-100 transition-opacity">✕</button>
+		</div>
+	</div>
+{/if}
+
+<style>
+	@keyframes slide-down {
+		from {
+			opacity: 0;
+			transform: translate(-50%, -100%);
+		}
+		to {
+			opacity: 1;
+			transform: translate(-50%, 0);
+		}
+	}
+	.animate-slide-down {
+		animation: slide-down 0.3s ease-out;
+	}
+</style>
