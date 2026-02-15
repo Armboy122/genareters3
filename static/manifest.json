@@ -1,0 +1,46 @@
+{
+	"name": "ระบบตรวจสอบเครื่องกำเนิดไฟฟ้า",
+	"short_name": "GenInspector",
+	"description": "ระบบบันทึกและตรวจสอบเครื่องกำเนิดไฟฟ้าสำหรับการไฟฟ้า",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#ffffff",
+	"theme_color": "#0f172a",
+	"orientation": "portrait",
+	"scope": "/",
+	"lang": "th",
+	"dir": "ltr",
+	"icons": [
+		{
+			"src": "/logogen.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/logogen.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/logogen.png",
+			"sizes": "180x180",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/logogen.png",
+			"sizes": "120x120",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "/logogen.png",
+			"sizes": "32x32",
+			"type": "image/png",
+			"purpose": "any"
+		}
+	],
+	"categories": ["utilities", "productivity"]
+}
