@@ -13,11 +13,11 @@ export const load: PageServerLoad = async () => {
 	// For each department, get generator counts, check monthly completeness, and compute KPI
 	const deptKPIs = await Promise.all(
 		deptList.map(async (dept) => {
-			// Total active generators in this department
+			// Total generators in this department (including disposed)
 			const totalResult = await db
 				.select({ count: count() })
 				.from(generators)
-				.where(and(eq(generators.departmentId, dept.id), eq(generators.isActive, true)));
+				.where(eq(generators.departmentId, dept.id));
 			const total = totalResult[0]?.count || 0;
 
 			// Count disposed (inactive) generators
@@ -44,13 +44,12 @@ export const load: PageServerLoad = async () => {
 				};
 			}
 
-			// Check completeness for each month from January to current month
+			// Check completeness for each month from January to current month (all machines)
 			const monthlyCompleteness = await db.execute(sql`
 				SELECT ins.month, count(DISTINCT ins.generator_id)::int as inspected_count
 				FROM inspections ins
 				JOIN generators g ON g.id = ins.generator_id
 				WHERE g.department_id = ${dept.id}
-					AND g.is_active = true
 					AND ins.year = ${currentYear}
 					AND ins.month <= ${currentMonth}
 				GROUP BY ins.month
@@ -72,14 +71,14 @@ export const load: PageServerLoad = async () => {
 			}
 			const allMonthsComplete = incompleteMonths.length === 0;
 
-			// Get the latest inspection for each generator in this department
+			// Get the latest inspection for each generator in this department (all machines)
 			const latestStatuses = await db.execute(sql`
 				SELECT i.machine_status, count(*)::int as cnt
 				FROM (
 					SELECT DISTINCT ON (ins.generator_id) ins.machine_status
 					FROM inspections ins
 					JOIN generators g ON g.id = ins.generator_id
-					WHERE g.department_id = ${dept.id} AND g.is_active = true
+					WHERE g.department_id = ${dept.id}
 					ORDER BY ins.generator_id, ins.year DESC, ins.month DESC, ins.created_at DESC
 				) i
 				GROUP BY i.machine_status
@@ -158,7 +157,7 @@ export const load: PageServerLoad = async () => {
 		else overallKpiScore = 1;
 	}
 
-	// === NEW: 1. Form template breakdown ===
+	// === NEW: 1. Form template breakdown (all machines) ===
 	const formBreakdown = await db.execute(sql`
 		SELECT
 			ft.id as form_id,
@@ -177,7 +176,6 @@ export const load: PageServerLoad = async () => {
 			ORDER BY ins.year DESC, ins.month DESC, ins.created_at DESC
 			LIMIT 1
 		) i ON true
-		WHERE g.is_active = true
 		GROUP BY ft.id, ft.name
 		ORDER BY total DESC
 	`);
@@ -235,7 +233,7 @@ export const load: PageServerLoad = async () => {
 		items: data.items
 	}));
 
-	// === NEW: 3. Monthly completeness heatmap (dept × month) ===
+	// === NEW: 3. Monthly completeness heatmap (dept × month) — all machines ===
 	const heatmapData = await db.execute(sql`
 		SELECT
 			g.department_id,
@@ -243,8 +241,7 @@ export const load: PageServerLoad = async () => {
 			count(DISTINCT ins.generator_id)::int as inspected_count
 		FROM inspections ins
 		JOIN generators g ON g.id = ins.generator_id
-		WHERE g.is_active = true
-			AND ins.year = ${currentYear}
+		WHERE ins.year = ${currentYear}
 			AND ins.month <= ${currentMonth}
 		GROUP BY g.department_id, ins.month
 		ORDER BY g.department_id, ins.month
@@ -275,7 +272,7 @@ export const load: PageServerLoad = async () => {
 			return { id: dept.id, name: dept.name, total: dept.total, months };
 		});
 
-	// === NEW: Feature A — KPI Trend (last 12 months) ===
+	// === NEW: Feature A — KPI Trend (last 12 months) — all machines ===
 	const trendData = await db.execute(sql`
 		WITH months AS (
 			SELECT generate_series(1, 12) as month_num
@@ -288,7 +285,7 @@ export const load: PageServerLoad = async () => {
 				count(DISTINCT g.id) FILTER (WHERE i_latest.machine_status = 'ซ่อมแซม')::int as repair,
 				count(DISTINCT g.id) FILTER (WHERE i_latest.machine_status = 'รอจำหน่าย')::int as disposal
 			FROM inspections ins
-			JOIN generators g ON g.id = ins.generator_id AND g.is_active = true
+			JOIN generators g ON g.id = ins.generator_id
 			LEFT JOIN LATERAL (
 				SELECT ins2.machine_status
 				FROM inspections ins2
