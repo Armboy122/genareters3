@@ -6,6 +6,16 @@
 	$: totalInspected = calendar.reduce((s: number, m: any) => s + Number(m.inspected), 0);
 	$: totalAll = calendar.reduce((s: number, m: any) => s + Number(m.total), 0);
 	$: completedMonths = calendar.filter((m: any) => Number(m.inspected) >= Number(m.total) && Number(m.total) > 0).length;
+
+	const now = new Date();
+	const currentYear = now.getFullYear();
+	const currentMonth = now.getMonth() + 1; // 1-12
+
+	function isFutureMonth(monthNum: number): boolean {
+		if (year > currentYear) return true;
+		if (year === currentYear && monthNum > currentMonth) return true;
+		return false;
+	}
 </script>
 
 <div class="min-h-screen">
@@ -67,38 +77,58 @@
 		<!-- Calendar Grid -->
 		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
 			{#each calendar as month}
-				<a
-					href="/department/{department.id}/month/{year}/{month.month}"
-					class="block bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-5 border-l-4
-						{month.inspected >= month.total && month.total > 0
-							? 'border-green-500'
-							: month.inspected > 0
-								? 'border-orange-500'
-								: 'border-gray-300'}"
-				>
-					<div class="flex items-center justify-between mb-3">
-						<span class="text-lg font-semibold text-gray-800">{month.monthName}</span>
-						{#if month.inspected >= month.total && month.total > 0}
-							<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">✅ ครบ</span>
-						{:else if month.inspected > 0}
-							<span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">⚠️ {month.progress}%</span>
-						{:else}
-							<span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">⬜ ยังไม่เริ่ม</span>
-						{/if}
-					</div>
-					<div class="text-center mb-3">
-						<p class="text-3xl font-bold text-gray-800">{month.inspected}<span class="text-lg text-gray-400">/{month.total}</span></p>
-						<p class="text-xs text-gray-500 mt-0.5">ตรวจแล้ว / ทั้งหมด</p>
-					</div>
-					<div>
-						<div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-							<div
-								class="h-full rounded-full transition-all duration-500 {month.inspected >= month.total && month.total > 0 ? 'bg-green-500' : month.inspected > 0 ? 'gradient-bg' : 'bg-gray-200'}"
-								style="width: {month.progress}%"
-							></div>
+				{#if isFutureMonth(month.month)}
+					<div
+						class="block bg-gray-50 rounded-xl shadow-sm p-5 border-l-4 border-gray-200 cursor-not-allowed opacity-60"
+					>
+						<div class="flex items-center justify-between mb-3">
+							<span class="text-lg font-semibold text-gray-400">{month.monthName}</span>
+							<span class="px-2 py-0.5 bg-gray-100 text-gray-400 text-xs rounded-full">⏳ ยังไม่ถึง</span>
+						</div>
+						<div class="text-center mb-3">
+							<p class="text-3xl font-bold text-gray-400">{month.inspected}<span class="text-lg text-gray-300">/{month.total}</span></p>
+							<p class="text-xs text-gray-400 mt-0.5">ตรวจแล้ว / ทั้งหมด</p>
+						</div>
+						<div>
+							<div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+								<div class="h-full rounded-full bg-gray-200" style="width: 0%"></div>
+							</div>
 						</div>
 					</div>
-				</a>
+				{:else}
+					<a
+						href="/department/{department.id}/month/{year}/{month.month}"
+						class="block bg-white rounded-xl shadow-md hover:shadow-lg transition-all p-5 border-l-4
+							{month.inspected >= month.total && month.total > 0
+								? 'border-green-500'
+								: month.inspected > 0
+									? 'border-orange-500'
+									: 'border-gray-300'}"
+					>
+						<div class="flex items-center justify-between mb-3">
+							<span class="text-lg font-semibold text-gray-800">{month.monthName}</span>
+							{#if month.inspected >= month.total && month.total > 0}
+								<span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">✅ ครบ</span>
+							{:else if month.inspected > 0}
+								<span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">⚠️ {month.progress}%</span>
+							{:else}
+								<span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">⬜ ยังไม่เริ่ม</span>
+							{/if}
+						</div>
+						<div class="text-center mb-3">
+							<p class="text-3xl font-bold text-gray-800">{month.inspected}<span class="text-lg text-gray-400">/{month.total}</span></p>
+							<p class="text-xs text-gray-500 mt-0.5">ตรวจแล้ว / ทั้งหมด</p>
+						</div>
+						<div>
+							<div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+								<div
+									class="h-full rounded-full transition-all duration-500 {month.inspected >= month.total && month.total > 0 ? 'bg-green-500' : month.inspected > 0 ? 'gradient-bg' : 'bg-gray-200'}"
+									style="width: {month.progress}%"
+								></div>
+							</div>
+						</div>
+					</a>
+				{/if}
 			{/each}
 		</div>
 	</main>
