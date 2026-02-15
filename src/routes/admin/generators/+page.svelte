@@ -1,23 +1,42 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import type { PageData } from './$types';
+	import type { Department, FormTemplate } from '$lib/db/schema';
 
-	let generators: any[] = [];
-	let departmentsList: any[] = [];
-	let templatesList: any[] = [];
-	let loading = true;
-	let search = '';
-	let filterDept = '';
-	let filterType = '';
-	let filterTemplate = '';
-	let currentPage = 1;
-	let pagination = { page: 1, limit: 25, total: 0, totalPages: 0 };
+	export let data: PageData;
+
+	type GeneratorWithRelations = {
+		id: string;
+		assetId: string;
+		type: string;
+		sizeKw: string;
+		product: string | null;
+		location: string;
+		departmentId: string;
+		departmentName: string | null;
+		formTemplateId: string | null;
+		formTemplateName: string | null;
+		isActive: boolean;
+		createdAt: Date;
+	};
+
+	$: generators = data.generators as GeneratorWithRelations[];
+	$: departmentsList = data.departments as Department[];
+	$: templatesList = data.formTemplates as FormTemplate[];
+	$: pagination = data.pagination;
+
+	let search = data.filters?.search || '';
+	let filterDept = data.filters?.departmentId || '';
+	let filterType = data.filters?.type || '';
+	let filterTemplate = data.filters?.formTemplateId || '';
 
 	let showModal = false;
-	let editingGen: any = null;
+	let editingGen: GeneratorWithRelations | null = null;
 	let saving = false;
 	let errorMessage = '';
 
-	let form = {
+	let formData = {
 		assetId: '',
 		type: '',
 		sizeKw: '',
@@ -30,66 +49,29 @@
 	let deptSearch = '';
 	let showDeptDropdown = false;
 
-	$: filteredDeptsList = departmentsList.filter((d: any) =>
+	$: filteredDeptsList = departmentsList.filter((d) =>
 		d.name.toLowerCase().includes(deptSearch.toLowerCase())
 	);
 
-	$: selectedDeptName = departmentsList.find((d: any) => d.id === form.departmentId)?.name || '';
-
-	function selectDept(dept: any) {
-		form.departmentId = dept.id;
+	function selectDept(dept: Department) {
+		formData.departmentId = dept.id;
 		deptSearch = dept.name;
 		showDeptDropdown = false;
 	}
 
 	const generatorTypes = ['สำนักงาน', 'ฉุกเฉิน 3 จ. 4 อ.', 'รถโมบายล์', 'โรงจักร', 'พระตำหนักฯ'];
 
-	async function loadGenerators() {
-		loading = true;
-		const params = new URLSearchParams();
-		if (search) params.set('search', search);
-		if (filterDept) params.set('departmentId', filterDept);
-		if (filterType) params.set('type', filterType);
-		if (filterTemplate) params.set('formTemplateId', filterTemplate);
-		params.set('page', String(currentPage));
-		params.set('limit', '25');
-
-		const res = await fetch(`/api/admin/generators?${params}`);
-		const data = await res.json();
-		if (data.success) {
-			generators = data.data;
-			pagination = data.pagination;
-		}
-		loading = false;
-	}
-
-	async function loadDropdowns() {
-		const [deptRes, tmplRes] = await Promise.all([
-			fetch('/api/admin/departments'),
-			fetch('/api/admin/form-templates')
-		]);
-		const deptData = await deptRes.json();
-		const tmplData = await tmplRes.json();
-		if (deptData.success) departmentsList = deptData.data;
-		if (tmplData.success) templatesList = tmplData.data;
-	}
-
-	onMount(() => {
-		loadDropdowns();
-		loadGenerators();
-	});
-
 	function openCreate() {
 		editingGen = null;
-		form = { assetId: '', type: '', sizeKw: '', product: '', location: '', departmentId: '', formTemplateId: '' };
+		formData = { assetId: '', type: '', sizeKw: '', product: '', location: '', departmentId: '', formTemplateId: '' };
 		deptSearch = '';
 		errorMessage = '';
 		showModal = true;
 	}
 
-	function openEdit(gen: any) {
+	function openEdit(gen: GeneratorWithRelations) {
 		editingGen = gen;
-		form = {
+		formData = {
 			assetId: gen.assetId,
 			type: gen.type,
 			sizeKw: gen.sizeKw,
@@ -103,54 +85,23 @@
 		showModal = true;
 	}
 
-	async function handleSave() {
-		if (!form.assetId.trim() || !form.type || !form.sizeKw || !form.location.trim() || !form.departmentId) {
-			errorMessage = 'กรุณากรอกข้อมูลให้ครบถ้วน';
-			return;
-		}
-		saving = true;
-		errorMessage = '';
-
-		const method = editingGen ? 'PUT' : 'POST';
-		const body = editingGen ? { id: editingGen.id, ...form } : form;
-
-		const res = await fetch('/api/admin/generators', {
-			method,
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-
-		const data = await res.json();
-		saving = false;
-
-		if (data.success) {
-			showModal = false;
-			loadGenerators();
-		} else {
-			errorMessage = data.message || 'เกิดข้อผิดพลาด';
-		}
-	}
-
-	async function toggleActive(gen: any) {
-		const newStatus = !gen.isActive;
-		if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานเครื่อง "${gen.assetId}" ?`)) return;
-
-		await fetch('/api/admin/generators', {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id: gen.id, isActive: newStatus })
-		});
-		loadGenerators();
-	}
-
 	function handleFilter() {
-		currentPage = 1;
-		loadGenerators();
+		const params = new URLSearchParams();
+		if (search) params.set('search', search);
+		if (filterDept) params.set('departmentId', filterDept);
+		if (filterType) params.set('type', filterType);
+		if (filterTemplate) params.set('formTemplateId', filterTemplate);
+		goto(`?${params}`, { invalidateAll: true });
 	}
 
 	function goToPage(p: number) {
-		currentPage = p;
-		loadGenerators();
+		const params = new URLSearchParams();
+		if (search) params.set('search', search);
+		if (filterDept) params.set('departmentId', filterDept);
+		if (filterType) params.set('type', filterType);
+		if (filterTemplate) params.set('formTemplateId', filterTemplate);
+		params.set('page', String(p));
+		goto(`?${params}`, { invalidateAll: true });
 	}
 </script>
 
@@ -207,9 +158,7 @@
 
 	<!-- Table -->
 	<div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-		{#if loading}
-			<div class="p-12 text-center text-gray-400">กำลังโหลด...</div>
-		{:else if generators.length === 0}
+		{#if generators.length === 0}
 			<div class="p-12 text-center text-gray-400">ไม่พบข้อมูลเครื่อง</div>
 		{:else}
 			<div class="overflow-x-auto">
@@ -253,13 +202,18 @@
 									>
 										แก้ไข
 									</button>
-									<button
-										on:click={() => toggleActive(gen)}
-										class="px-2 py-1 text-xs rounded transition-colors
-										{gen.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}"
-									>
+									<form method="POST" action="?/toggleActive" use:enhance={() => {
+									const newStatus = !gen.isActive;
+									if (!confirm(`ยืนยัน${newStatus ? 'เปิด' : 'ปิด'}ใช้งานเครื่อง "${gen.assetId}" ?`)) return () => {};
+									return async ({ update }) => { await update(); };
+								}} class="inline">
+									<input type="hidden" name="id" value={gen.id} />
+									<input type="hidden" name="isActive" value={String(!gen.isActive)} />
+									<button type="submit" class="px-2 py-1 text-xs rounded transition-colors
+										{gen.isActive ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-green-50 text-green-700 hover:bg-green-100'}">
 										{gen.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
 									</button>
+								</form>
 								</td>
 							</tr>
 						{/each}
@@ -276,7 +230,7 @@
 							<button
 								on:click={() => goToPage(i + 1)}
 								class="px-3 py-1 rounded text-xs transition-colors
-								{currentPage === i + 1 ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}"
+								{pagination.page === i + 1 ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}"
 							>
 								{i + 1}
 							</button>
@@ -292,102 +246,126 @@
 {#if showModal}
 	<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
 		<div class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-			<div class="px-6 py-4 border-b border-gray-100">
-				<h3 class="text-lg font-semibold text-gray-800">
-					{editingGen ? 'แก้ไขเครื่อง' : 'เพิ่มเครื่องใหม่'}
-				</h3>
-			</div>
-			<div class="p-6 space-y-4">
-				{#if errorMessage}
-					<div class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{errorMessage}</div>
+			<form
+				method="POST"
+				action={editingGen ? '?/update' : '?/create'}
+				use:enhance={() => {
+					saving = true;
+					errorMessage = '';
+					return async ({ result, update }) => {
+						saving = false;
+						if (result.type === 'success') {
+							showModal = false;
+							errorMessage = '';
+						} else if (result.type === 'failure') {
+							errorMessage = (result.data?.error as string) || 'เกิดข้อผิดพลาด';
+						}
+						await update();
+					};
+				}}
+			>
+				{#if editingGen}
+					<input type="hidden" name="id" value={editingGen.id} />
 				{/if}
-
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">รหัสทรัพย์สิน *</label>
-					<input type="text" bind:value={form.assetId} placeholder="เช่น 311000772"
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
+				<input type="hidden" name="departmentId" value={formData.departmentId} />
+				<input type="hidden" name="formTemplateId" value={formData.formTemplateId} />
+				<div class="px-6 py-4 border-b border-gray-100">
+					<h3 class="text-lg font-semibold text-gray-800">
+						{editingGen ? 'แก้ไขเครื่อง' : 'เพิ่มเครื่องใหม่'}
+					</h3>
 				</div>
+				<div class="p-6 space-y-4">
+					{#if errorMessage}
+						<div class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{errorMessage}</div>
+					{/if}
 
-				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">ประเภท *</label>
-						<select bind:value={form.type} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-							<option value="">เลือกประเภท</option>
-							{#each generatorTypes as t}
-								<option value={t}>{t}</option>
+						<label class="block text-sm font-medium text-gray-700 mb-1">รหัสทรัพย์สิน *</label>
+						<input type="text" name="assetId" bind:value={formData.assetId} placeholder="เช่น 311000772"
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
+					</div>
+
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-medium text-gray-700 mb-1">ประเภท *</label>
+							<select name="type" bind:value={formData.type} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+								<option value="">เลือกประเภท</option>
+								{#each generatorTypes as t}
+									<option value={t}>{t}</option>
+								{/each}
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-medium text-gray-700 mb-1">ขนาด (kW) *</label>
+							<input type="number" name="sizeKw" bind:value={formData.sizeKw} placeholder="เช่น 100"
+								class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
+						</div>
+					</div>
+
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">ผลิตภัณฑ์</label>
+						<input type="text" name="product" bind:value={formData.product} placeholder="เช่น CUMMINS"
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
+					</div>
+
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">สถานที่ติดตั้ง *</label>
+						<input type="text" name="location" bind:value={formData.location} placeholder="เช่น สนง.ยะลา"
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
+					</div>
+
+					<div class="relative">
+						<label class="block text-sm font-medium text-gray-700 mb-1">สังกัด *</label>
+						<input
+							type="text"
+							bind:value={deptSearch}
+							on:focus={() => (showDeptDropdown = true)}
+							on:input={() => { showDeptDropdown = true; formData.departmentId = ''; }}
+							placeholder="พิมพ์เพื่อค้นหาสังกัด / การไฟฟ้า..."
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light"
+						/>
+						{#if formData.departmentId}
+							<span class="absolute right-3 top-[2.1rem] text-green-500 text-sm">✓</span>
+						{/if}
+						{#if showDeptDropdown && filteredDeptsList.length > 0}
+							<div class="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
+								{#each filteredDeptsList as dept}
+									<button
+										type="button"
+										on:click={() => selectDept(dept)}
+										class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors {formData.departmentId === dept.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}"
+									>
+										{dept.name}
+									</button>
+								{/each}
+							</div>
+						{:else if showDeptDropdown && deptSearch && filteredDeptsList.length === 0}
+							<div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-400">
+								ไม่พบสังกัด "{deptSearch}"
+							</div>
+						{/if}
+					</div>
+
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">แบบฟอร์มที่ใช้ตรวจ</label>
+						<select bind:value={formData.formTemplateId} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+							<option value="">ไม่ระบุ</option>
+							{#each templatesList as tmpl}
+								<option value={tmpl.id}>{tmpl.name}</option>
 							{/each}
 						</select>
 					</div>
-					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">ขนาด (kW) *</label>
-						<input type="number" bind:value={form.sizeKw} placeholder="เช่น 100"
-							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
-					</div>
 				</div>
-
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">ผลิตภัณฑ์</label>
-					<input type="text" bind:value={form.product} placeholder="เช่น CUMMINS"
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
+				<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
+					<button type="button" on:click={() => (showModal = false)} class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+						ยกเลิก
+					</button>
+					<button type="submit" disabled={saving}
+						class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10">
+						{saving ? 'กำลังบันทึก...' : 'บันทึก'}
+					</button>
 				</div>
-
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">สถานที่ติดตั้ง *</label>
-					<input type="text" bind:value={form.location} placeholder="เช่น สนง.ยะลา"
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light" />
-				</div>
-
-				<div class="relative">
-					<label class="block text-sm font-medium text-gray-700 mb-1">สังกัด *</label>
-					<input
-						type="text"
-						bind:value={deptSearch}
-						on:focus={() => (showDeptDropdown = true)}
-						on:input={() => { showDeptDropdown = true; form.departmentId = ''; }}
-						placeholder="พิมพ์เพื่อค้นหาสังกัด / การไฟฟ้า..."
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light"
-					/>
-					{#if form.departmentId}
-						<span class="absolute right-3 top-[2.1rem] text-green-500 text-sm">✓</span>
-					{/if}
-					{#if showDeptDropdown && filteredDeptsList.length > 0}
-						<div class="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
-							{#each filteredDeptsList as dept}
-								<button
-									type="button"
-									on:click={() => selectDept(dept)}
-									class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors {form.departmentId === dept.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'}"
-								>
-									{dept.name}
-								</button>
-							{/each}
-						</div>
-					{:else if showDeptDropdown && deptSearch && filteredDeptsList.length === 0}
-						<div class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm text-gray-400">
-							ไม่พบสังกัด "{deptSearch}"
-						</div>
-					{/if}
-				</div>
-
-				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1">แบบฟอร์มที่ใช้ตรวจ</label>
-					<select bind:value={form.formTemplateId} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-						<option value="">ไม่ระบุ</option>
-						{#each templatesList as tmpl}
-							<option value={tmpl.id}>{tmpl.name}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-			<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
-				<button on:click={() => (showModal = false)} class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-					ยกเลิก
-				</button>
-				<button on:click={handleSave} disabled={saving}
-					class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10">
-					{saving ? 'กำลังบันทึก...' : 'บันทึก'}
-				</button>
-			</div>
+			</form>
 		</div>
 	</div>
 {/if}

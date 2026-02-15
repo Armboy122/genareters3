@@ -1,15 +1,12 @@
 import { redirect, type Handle } from '@sveltejs/kit';
+import { verifySession } from '$lib/server/session';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const sessionCookie = event.cookies.get('session');
 
 	if (sessionCookie) {
-		try {
-			const decoded = Buffer.from(sessionCookie, 'base64').toString('utf-8');
-			event.locals.user = JSON.parse(decoded);
-		} catch {
-			event.locals.user = null;
-		}
+		const user = verifySession(sessionCookie);
+		event.locals.user = user;
 	} else {
 		event.locals.user = null;
 	}
@@ -31,6 +28,27 @@ export const handle: Handle = async ({ event, resolve }) => {
 				status: 403,
 				headers: { 'Content-Type': 'application/json' }
 			});
+		}
+	}
+
+	// Protect /dashboard route - require login
+	if (event.url.pathname.startsWith('/dashboard')) {
+		if (!event.locals.user) {
+			throw redirect(302, '/login?redirect=' + encodeURIComponent(event.url.pathname));
+		}
+	}
+
+	// Protect /department routes - require login
+	if (event.url.pathname.startsWith('/department')) {
+		if (!event.locals.user) {
+			throw redirect(302, '/login?redirect=' + encodeURIComponent(event.url.pathname));
+		}
+	}
+
+	// Protect /inspection routes - require login
+	if (event.url.pathname.startsWith('/inspection')) {
+		if (!event.locals.user) {
+			throw redirect(302, '/login?redirect=' + encodeURIComponent(event.url.pathname));
 		}
 	}
 

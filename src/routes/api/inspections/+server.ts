@@ -10,13 +10,27 @@ import {
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	const { generatorId, month, year, inspectorName, items, overallRemark } = body;
+export const POST: RequestHandler = async ({ request, locals }) => {
+	try {
+		// Authentication check
+		if (!locals.user) {
+			return json({ success: false, message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
+		}
 
-	if (!generatorId || !month || !year || !inspectorName) {
-		return json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' }, { status: 400 });
-	}
+		// Role check - only admin and inspector can create inspections
+		if (locals.user.role === 'viewer') {
+			return json({ success: false, message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+		}
+
+		const body = await request.json();
+		const { generatorId, month, year, inspectorName, items, overallRemark } = body;
+
+		// Use logged-in user's displayName as fallback for inspectorName
+		const finalInspectorName = inspectorName || locals.user.displayName;
+
+		if (!generatorId || !month || !year || !finalInspectorName) {
+			return json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' }, { status: 400 });
+		}
 
 	// Get generator's form template
 	const generator = await db
@@ -98,7 +112,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			year,
 			inspectionDate: new Date(),
 			formTemplateId: generator[0].formTemplateId,
-			inspectorName,
+			inspectorName: finalInspectorName,
 			overallStatus,
 			machineStatus,
 			overallRemark: overallRemark || null
@@ -117,15 +131,33 @@ export const POST: RequestHandler = async ({ request }) => {
 	);
 
 	return json({ success: true, inspectionId: newInspection[0].id });
+	} catch (error) {
+		console.error('POST /api/inspections error:', error);
+		return json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่' }, { status: 500 });
+	}
 };
 
-export const PUT: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	const { inspectionId, inspectorName, items, overallRemark } = body;
+export const PUT: RequestHandler = async ({ request, locals }) => {
+	try {
+		// Authentication check
+		if (!locals.user) {
+			return json({ success: false, message: 'กรุณาเข้าสู่ระบบ' }, { status: 401 });
+		}
 
-	if (!inspectionId || !inspectorName) {
-		return json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' }, { status: 400 });
-	}
+		// Role check - only admin and inspector can update inspections
+		if (locals.user.role === 'viewer') {
+			return json({ success: false, message: 'ไม่มีสิทธิ์เข้าถึง' }, { status: 403 });
+		}
+
+		const body = await request.json();
+		const { inspectionId, inspectorName, items, overallRemark } = body;
+
+		// Use logged-in user's displayName as fallback for inspectorName
+		const finalInspectorName = inspectorName || locals.user.displayName;
+
+		if (!inspectionId || !finalInspectorName) {
+			return json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' }, { status: 400 });
+		}
 
 	// Get existing inspection
 	const existingInspection = await db
@@ -185,7 +217,7 @@ export const PUT: RequestHandler = async ({ request }) => {
 	await db
 		.update(inspections)
 		.set({
-			inspectorName,
+			inspectorName: finalInspectorName,
 			overallStatus,
 			machineStatus,
 			overallRemark: overallRemark || null,
@@ -207,4 +239,8 @@ export const PUT: RequestHandler = async ({ request }) => {
 	);
 
 	return json({ success: true });
+	} catch (error) {
+		console.error('PUT /api/inspections error:', error);
+		return json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่' }, { status: 500 });
+	}
 };

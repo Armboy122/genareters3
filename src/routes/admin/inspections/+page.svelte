@@ -1,15 +1,20 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { formatThaiDate } from '$lib/utils';
-	import { onMount } from 'svelte';
+	import type { PageData } from './$types';
+	import type { Department } from '$lib/db/schema';
 
-	let inspectionList: any[] = [];
-	let departmentsList: any[] = [];
-	let loading = true;
-	let filterDept = '';
-	let filterMonth = '';
-	let filterYear = '';
-	let filterStatus = '';
-	let search = '';
+	export let data: PageData;
+
+	$: inspectionList = data.inspections;
+	$: departmentsList = data.departments as Department[];
+	$: pagination = data.pagination;
+
+	let search = data.filters?.search || '';
+	let filterDept = data.filters?.departmentId || '';
+	let filterMonth = data.filters?.month || '';
+	let filterYear = data.filters?.year || '';
+	let filterStatus = data.filters?.overallStatus || '';
 
 	const currentYear = new Date().getFullYear();
 
@@ -18,34 +23,25 @@
 		'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
 	];
 
-	async function loadInspections() {
-		loading = true;
+	function handleFilter() {
 		const params = new URLSearchParams();
+		if (search) params.set('search', search);
 		if (filterDept) params.set('departmentId', filterDept);
 		if (filterMonth) params.set('month', filterMonth);
 		if (filterYear) params.set('year', filterYear);
-		if (filterStatus) params.set('machineStatus', filterStatus);
+		if (filterStatus) params.set('overallStatus', filterStatus);
+		goto(`?${params}`, { invalidateAll: true });
+	}
+
+	function goToPage(p: number) {
+		const params = new URLSearchParams();
 		if (search) params.set('search', search);
-
-		const res = await fetch(`/api/admin/inspections?${params}`);
-		const data = await res.json();
-		if (data.success) inspectionList = data.data;
-		loading = false;
-	}
-
-	async function loadDepartments() {
-		const res = await fetch('/api/admin/departments');
-		const data = await res.json();
-		if (data.success) departmentsList = data.data;
-	}
-
-	onMount(() => {
-		loadDepartments();
-		loadInspections();
-	});
-
-	function handleFilter() {
-		loadInspections();
+		if (filterDept) params.set('departmentId', filterDept);
+		if (filterMonth) params.set('month', filterMonth);
+		if (filterYear) params.set('year', filterYear);
+		if (filterStatus) params.set('overallStatus', filterStatus);
+		params.set('page', String(p));
+		goto(`?${params}`, { invalidateAll: true });
 	}
 </script>
 
@@ -102,9 +98,7 @@
 
 	<!-- Table -->
 	<div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-		{#if loading}
-			<div class="p-12 text-center text-gray-400">กำลังโหลด...</div>
-		{:else if inspectionList.length === 0}
+		{#if inspectionList.length === 0}
 			<div class="p-12 text-center text-gray-400">ไม่พบข้อมูลการตรวจ</div>
 		{:else}
 			<div class="overflow-x-auto">
@@ -156,8 +150,21 @@
 					</tbody>
 				</table>
 			</div>
-			<div class="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-				ทั้งหมด {inspectionList.length} รายการ
+			<div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+				<span>แสดง {inspectionList.length} จาก {pagination.total} รายการ</span>
+				{#if pagination.totalPages > 1}
+					<div class="flex gap-1">
+						{#each Array(pagination.totalPages) as _, i}
+							<button
+								on:click={() => goToPage(i + 1)}
+								class="px-3 py-1 rounded text-xs transition-colors
+								{pagination.page === i + 1 ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'}"
+							>
+								{i + 1}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

@@ -1,41 +1,30 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import type { FormTemplateItem } from '$lib/db/schema';
 
 	$: templateId = $page.params.id;
 
-	let templateName = '';
-	let templateDescription = '';
-	let items: any[] = [];
-	let loading = true;
+	type EditableItem = FormTemplateItem & { sortOrder: number; _deleted?: boolean; isNew?: boolean; isNewCategory?: boolean };
+	type NewItem = {
+		id: null;
+		formTemplateId: string | undefined;
+		itemCode: string;
+		category: string;
+		description: string;
+		isDisposalCriteria: boolean;
+		sortOrder: number;
+		isNew: true;
+		isNewCategory?: boolean;
+		_deleted?: boolean;
+	};
+
+	export let data;
+	let templateName = data.template.name;
+	let templateDescription = data.template.description || '';
+	let items: (EditableItem | NewItem)[] = data.items;
 	let saving = false;
 	let errorMessage = '';
-
-	async function loadData() {
-		loading = true;
-		const [tmplRes, itemsRes] = await Promise.all([
-			fetch('/api/admin/form-templates'),
-			fetch(`/api/admin/form-templates/items?formTemplateId=${templateId}`)
-		]);
-
-		const tmplData = await tmplRes.json();
-		const itemsData = await itemsRes.json();
-
-		if (tmplData.success) {
-			const tmpl = tmplData.data.find((t: any) => t.id === templateId);
-			if (tmpl) {
-				templateName = tmpl.name;
-				templateDescription = tmpl.description || '';
-			}
-		}
-		if (itemsData.success) {
-			items = itemsData.data.map((item: any, i: number) => ({ ...item, sortOrder: i }));
-		}
-		loading = false;
-	}
-
-	onMount(() => { loadData(); });
 
 	function addItem() {
 		const lastItem = items[items.length - 1];
@@ -91,66 +80,30 @@
 		items = items.map((item, i) => ({ ...item, sortOrder: i }));
 	}
 
-	async function handleSave() {
-		saving = true;
-		errorMessage = '';
-
-		try {
-			// Update template name/description
-			await fetch('/api/admin/form-templates', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ id: templateId, name: templateName, description: templateDescription })
-			});
-
-			// Delete removed items
-			for (const item of items.filter((i) => i._deleted && i.id)) {
-				await fetch('/api/admin/form-templates/items', {
-					method: 'DELETE',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ id: item.id })
-				});
-			}
-
-			// Create new items
-			for (const item of items.filter((i) => i.isNew && !i._deleted)) {
-				await fetch('/api/admin/form-templates/items', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						formTemplateId: templateId,
-						itemCode: item.itemCode,
-						category: item.category,
-						description: item.description,
-						isDisposalCriteria: item.isDisposalCriteria,
-						sortOrder: item.sortOrder
-					})
-				});
-			}
-
-			// Update existing items (bulk)
-			const existingItems = items.filter((i) => i.id && !i.isNew && !i._deleted);
-			if (existingItems.length > 0) {
-				await fetch('/api/admin/form-templates/items', {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(existingItems)
-				});
-			}
-
-			goto('/admin/form-templates');
-		} catch (e) {
-			errorMessage = 'เกิดข้อผิดพลาดในการบันทึก';
-		} finally {
-			saving = false;
-		}
-	}
-
 	$: visibleItems = items.filter((i) => !i._deleted);
 	$: categories = [...new Set(visibleItems.map((i) => i.category).filter(Boolean))];
+	$: itemsJson = JSON.stringify(items);
 </script>
 
-<div>
+<form
+	method="POST"
+	action="?/save"
+	use:enhance={() => {
+		saving = true;
+		errorMessage = '';
+		return async ({ result, update }) => {
+			saving = false;
+			if (result.type === 'failure') {
+				errorMessage = (result.data?.error as string) || 'เกิดข้อผิดพลาดในการบันทึก';
+			}
+			await update();
+		};
+	}}
+>
+	<input type="hidden" name="templateName" value={templateName} />
+	<input type="hidden" name="templateDescription" value={templateDescription} />
+	<input type="hidden" name="items" value={itemsJson} />
+
 	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 		<div>
 			<h1 class="text-2xl font-bold text-gray-900">แก้ไขแบบฟอร์ม</h1>
@@ -164,7 +117,7 @@
 				← กลับ
 			</a>
 			<button
-				on:click={handleSave}
+				type="submit"
 				disabled={saving}
 				class="px-4 py-2.5 gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium disabled:opacity-50 relative z-10"
 			>
@@ -173,12 +126,9 @@
 		</div>
 	</div>
 
-	{#if loading}
-		<div class="p-12 text-center text-gray-400">กำลังโหลด...</div>
-	{:else}
-		{#if errorMessage}
-			<div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{errorMessage}</div>
-		{/if}
+	{#if errorMessage}
+		<div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{errorMessage}</div>
+	{/if}
 
 		<!-- Template Info -->
 		<div class="bg-white rounded-xl border border-gray-100 p-5 mb-6">
@@ -202,12 +152,14 @@
 				<h2 class="font-semibold text-gray-800">หัวข้อตรวจสอบ ({visibleItems.length} รายการ)</h2>
 				<div class="flex gap-2">
 					<button
+						type="button"
 						on:click={addCategory}
 						class="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
 					>
 						+ หมวดใหม่
 					</button>
 					<button
+						type="button"
 						on:click={addItem}
 						class="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
 					>
@@ -227,11 +179,13 @@
 								<!-- Move buttons -->
 								<div class="flex flex-col gap-0.5 pt-1">
 									<button
+										type="button"
 										on:click={() => moveItem(itemIndex, -1)}
 										class="text-gray-400 hover:text-gray-600 text-xs leading-none"
 										aria-label="เลื่อนขึ้น"
 									>▲</button>
 									<button
+										type="button"
 										on:click={() => moveItem(itemIndex, 1)}
 										class="text-gray-400 hover:text-gray-600 text-xs leading-none"
 										aria-label="เลื่อนลง"
@@ -271,6 +225,7 @@
 
 								<!-- Delete -->
 								<button
+									type="button"
 									on:click={() => removeItem(itemIndex)}
 									class="text-red-400 hover:text-red-600 text-sm p-1"
 									aria-label="ลบหัวข้อ"
@@ -281,5 +236,4 @@
 				</div>
 			{/if}
 		</div>
-	{/if}
-</div>
+</form>

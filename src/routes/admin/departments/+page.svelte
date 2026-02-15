@@ -1,29 +1,25 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { enhance } from '$app/forms';
+	import type { PageData } from './$types';
+	import type { Department } from '$lib/db/schema';
 
-	let departments: any[] = [];
+	type DepartmentWithCount = Department & { generatorCount: number };
+
+	export let data: PageData;
+
 	let search = '';
-	let loading = true;
 	let showModal = false;
-	let editingDept: any = null;
+	let editingDept: DepartmentWithCount | null = null;
 	let formName = '';
 	let saving = false;
 	let errorMessage = '';
+
+	$: departments = data.departments as DepartmentWithCount[];
 
 	// Instant client-side filtering
 	$: filteredDepts = departments.filter((dept) =>
 		dept.name.toLowerCase().includes(search.toLowerCase())
 	);
-
-	async function loadDepartments() {
-		loading = true;
-		const res = await fetch('/api/admin/departments');
-		const data = await res.json();
-		if (data.success) departments = data.data;
-		loading = false;
-	}
-
-	onMount(() => { loadDepartments(); });
 
 	function openCreate() {
 		editingDept = null;
@@ -32,56 +28,11 @@
 		showModal = true;
 	}
 
-	function openEdit(dept: any) {
+	function openEdit(dept: DepartmentWithCount) {
 		editingDept = dept;
 		formName = dept.name;
 		errorMessage = '';
 		showModal = true;
-	}
-
-	async function handleSave() {
-		if (!formName.trim()) {
-			errorMessage = 'กรุณาระบุชื่อสังกัด';
-			return;
-		}
-		saving = true;
-		errorMessage = '';
-
-		const method = editingDept ? 'PUT' : 'POST';
-		const body = editingDept ? { id: editingDept.id, name: formName } : { name: formName };
-
-		const res = await fetch('/api/admin/departments', {
-			method,
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-
-		const data = await res.json();
-		saving = false;
-
-		if (data.success) {
-			showModal = false;
-			loadDepartments();
-		} else {
-			errorMessage = data.message || 'เกิดข้อผิดพลาด';
-		}
-	}
-
-	async function handleDelete(dept: any) {
-		if (!confirm(`ยืนยันลบสังกัด "${dept.name}" ?`)) return;
-
-		const res = await fetch('/api/admin/departments', {
-			method: 'DELETE',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id: dept.id })
-		});
-
-		const data = await res.json();
-		if (data.success) {
-			loadDepartments();
-		} else {
-			alert(data.message || 'ไม่สามารถลบได้');
-		}
 	}
 </script>
 
@@ -123,9 +74,7 @@
 
 	<!-- Table -->
 	<div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-		{#if loading}
-			<div class="p-12 text-center text-gray-400">กำลังโหลด...</div>
-		{:else if filteredDepts.length === 0}
+		{#if filteredDepts.length === 0}
 			<div class="p-12 text-center text-gray-400">
 				{#if search}
 					ไม่พบสังกัดที่ค้นหา "{search}"
@@ -161,12 +110,30 @@
 									>
 										แก้ไข
 									</button>
-									<button
-										on:click={() => handleDelete(dept)}
-										class="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+									<form
+										method="POST"
+										action="?/delete"
+										use:enhance={() => {
+											if (!confirm(`ยืนยันลบสังกัด "${dept.name}" ?`)) {
+												return () => {};
+											}
+											return async ({ result, update }) => {
+												if (result.type === 'failure') {
+													alert(result.data?.error || 'ไม่สามารถลบได้');
+												}
+												await update();
+											};
+										}}
+										class="inline"
 									>
-										ลบ
-									</button>
+										<input type="hidden" name="id" value={dept.id} />
+										<button
+											type="submit"
+											class="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+										>
+											ลบ
+										</button>
+									</form>
 								</td>
 							</tr>
 						{/each}
@@ -188,41 +155,64 @@
 {#if showModal}
 	<div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
 		<div class="bg-white rounded-xl shadow-xl w-full max-w-md">
-			<div class="px-6 py-4 border-b border-gray-100">
-				<h3 class="text-lg font-semibold text-gray-800">
-					{editingDept ? 'แก้ไขสังกัด' : 'เพิ่มสังกัดใหม่'}
-				</h3>
-			</div>
-			<div class="p-6">
-				{#if errorMessage}
-					<div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-						{errorMessage}
-					</div>
+			<form
+				method="POST"
+				action={editingDept ? '?/update' : '?/create'}
+				use:enhance={() => {
+					saving = true;
+					errorMessage = '';
+					return async ({ result, update }) => {
+						saving = false;
+						if (result.type === 'success') {
+							showModal = false;
+							errorMessage = '';
+						} else if (result.type === 'failure') {
+							errorMessage = (result.data?.error as string) || 'เกิดข้อผิดพลาด';
+						}
+						await update();
+					};
+				}}
+			>
+				{#if editingDept}
+					<input type="hidden" name="id" value={editingDept.id} />
 				{/if}
-				<label class="block text-sm font-medium text-gray-700 mb-2">ชื่อสังกัด</label>
-				<input
-					type="text"
-					bind:value={formName}
-					on:keydown={(e) => e.key === 'Enter' && handleSave()}
-					placeholder="เช่น กฟจ.ยะลา"
-					class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent"
-				/>
-			</div>
-			<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
-				<button
-					on:click={() => (showModal = false)}
-					class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-				>
-					ยกเลิก
-				</button>
-				<button
-					on:click={handleSave}
-					disabled={saving}
-					class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10"
-				>
-					{saving ? 'กำลังบันทึก...' : 'บันทึก'}
-				</button>
-			</div>
+				<div class="px-6 py-4 border-b border-gray-100">
+					<h3 class="text-lg font-semibold text-gray-800">
+						{editingDept ? 'แก้ไขสังกัด' : 'เพิ่มสังกัดใหม่'}
+					</h3>
+				</div>
+				<div class="p-6">
+					{#if errorMessage}
+						<div class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+							{errorMessage}
+						</div>
+					{/if}
+					<label class="block text-sm font-medium text-gray-700 mb-2">ชื่อสังกัด</label>
+					<input
+						type="text"
+						name="name"
+						bind:value={formName}
+						placeholder="เช่น กฟจ.ยะลา"
+						class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent"
+					/>
+				</div>
+				<div class="px-6 py-4 border-t border-gray-100 flex gap-2 justify-end">
+					<button
+						type="button"
+						on:click={() => (showModal = false)}
+						class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+					>
+						ยกเลิก
+					</button>
+					<button
+						type="submit"
+						disabled={saving}
+						class="px-4 py-2 text-sm gradient-bg text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 relative z-10"
+					>
+						{saving ? 'กำลังบันทึก...' : 'บันทึก'}
+					</button>
+				</div>
+			</form>
 		</div>
 	</div>
 {/if}
