@@ -1,6 +1,6 @@
 import { db } from '$lib/db';
 import { departments, generators, inspections } from '$lib/db/schema';
-import { eq, and, sql, count } from 'drizzle-orm';
+import { eq, and, sql, count, inArray } from 'drizzle-orm';
 import { getThaiMonthName } from '$lib/utils';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
@@ -23,12 +23,30 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const currentYear = new Date().getFullYear();
 	const year = yearParam ? parseInt(yearParam) : currentYear;
 
-	// Get total generators for this department
-	const totalResult = await db
-		.select({ count: count() })
+	// Get all generators for this department
+	const allGens = await db
+		.select({ id: generators.id })
 		.from(generators)
 		.where(eq(generators.departmentId, departmentId));
-	const totalGenerators = Number(totalResult[0]?.count) || 0;
+
+	// Get the earliest month each generator was disposed (machine_status = 'รอจำหน่าย')
+	const disposedGens = allGens.length > 0
+		? await db
+				.select({
+					generatorId: inspections.generatorId,
+					disposedMonth: sql<number>`MIN(${inspections.year} * 12 + ${inspections.month})`.as('disposed_month')
+				})
+				.from(inspections)
+				.where(
+					and(
+						eq(inspections.machineStatus, 'รอจำหน่าย'),
+						inArray(inspections.generatorId, allGens.map(g => g.id))
+					)
+				)
+				.groupBy(inspections.generatorId)
+		: [];
+
+	const disposedMap = new Map(disposedGens.map(d => [d.generatorId, d.disposedMonth]));
 
 	// Get inspections per month for this department in the given year
 	const monthlyInspections = await db
@@ -53,6 +71,15 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	// Build calendar data for all 12 months
 	const calendar = Array.from({ length: 12 }, (_, i) => {
 		const month = i + 1;
+		const viewMonth = year * 12 + month;
+
+		// Count generators that are NOT disposed before this month
+		const totalGenerators = allGens.filter(g => {
+			const disposedAt = disposedMap.get(g.id);
+			// If never disposed, or disposed in this month or later → still active
+			return !disposedAt || disposedAt >= viewMonth;
+		}).length;
+
 		const inspected = Number(inspectionMap.get(month)) || 0;
 		const progress = totalGenerators > 0 ? Math.round((inspected / totalGenerators) * 100) : 0;
 

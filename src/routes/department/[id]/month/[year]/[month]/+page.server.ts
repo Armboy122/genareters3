@@ -39,7 +39,17 @@ export const load: PageServerLoad = async ({ params }) => {
 			isActive: generators.isActive
 		})
 		.from(generators)
-		.where(and(eq(generators.departmentId, departmentId), eq(generators.isActive, true)))
+		.where(
+			and(
+				eq(generators.departmentId, departmentId),
+				sql`NOT EXISTS (
+					SELECT 1 FROM inspections i
+					WHERE i.generator_id = ${generators.id}
+						AND i.machine_status = 'รอจำหน่าย'
+						AND (i.year * 12 + i.month) < (${year} * 12 + ${month})
+				)`
+			)
+		)
 		.orderBy(generators.assetId);
 
 	// Get inspections for this month/year

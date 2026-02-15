@@ -14,7 +14,14 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 	const month = monthParam ? parseInt(monthParam) : current.month;
 	const year = yearParam ? parseInt(yearParam) : current.year;
 
-	// Get all departments with generator counts
+	const notDisposedBefore = sql`NOT EXISTS (
+		SELECT 1 FROM inspections i
+		WHERE i.generator_id = ${generators.id}
+			AND i.machine_status = 'รอจำหน่าย'
+			AND (i.year * 12 + i.month) < (${year} * 12 + ${month})
+	)`;
+
+	// Get all departments with generator counts (excluding disposed before this month)
 	const departmentsWithStats = await db
 		.select({
 			id: departments.id,
@@ -23,7 +30,10 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			inspectedCount: sql<number>`count(distinct ${inspections.generatorId})`
 		})
 		.from(departments)
-		.leftJoin(generators, eq(generators.departmentId, departments.id))
+		.leftJoin(generators, and(
+			eq(generators.departmentId, departments.id),
+			notDisposedBefore
+		))
 		.leftJoin(
 			inspections,
 			and(
@@ -35,28 +45,53 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		.groupBy(departments.id, departments.name)
 		.orderBy(departments.name);
 
-	// Calculate overall stats
+	// Calculate overall stats (excluding disposed before this month)
 	const totalGenerators = await db
 		.select({ count: count() })
 		.from(generators)
+		.where(notDisposedBefore)
 		.then((res) => res[0]?.count || 0);
 
 	const totalInspected = await db
 		.select({ count: count() })
 		.from(inspections)
-		.where(and(eq(inspections.month, month), eq(inspections.year, year)))
+		.innerJoin(generators, eq(inspections.generatorId, generators.id))
+		.where(
+			and(
+				eq(inspections.month, month),
+				eq(inspections.year, year),
+				sql`NOT EXISTS (
+					SELECT 1 FROM inspections i2
+					WHERE i2.generator_id = ${generators.id}
+						AND i2.machine_status = 'รอจำหน่าย'
+						AND (i2.year * 12 + i2.month) < (${year} * 12 + ${month})
+				)`
+			)
+		)
 		.then((res) => res[0]?.count || 0);
 
 	const progress = totalGenerators > 0 ? Math.round((totalInspected / totalGenerators) * 100) : 0;
 
-	// Machine status breakdown for current month
+	// Machine status breakdown for current month (excluding disposed before this month)
 	const statusBreakdown = await db
 		.select({
 			machineStatus: inspections.machineStatus,
 			count: sql<number>`count(*)::int`
 		})
 		.from(inspections)
-		.where(and(eq(inspections.month, month), eq(inspections.year, year)))
+		.innerJoin(generators, eq(inspections.generatorId, generators.id))
+		.where(
+			and(
+				eq(inspections.month, month),
+				eq(inspections.year, year),
+				sql`NOT EXISTS (
+					SELECT 1 FROM inspections i2
+					WHERE i2.generator_id = ${generators.id}
+						AND i2.machine_status = 'รอจำหน่าย'
+						AND (i2.year * 12 + i2.month) < (${year} * 12 + ${month})
+				)`
+			)
+		)
 		.groupBy(inspections.machineStatus);
 
 	const machineStats = {
