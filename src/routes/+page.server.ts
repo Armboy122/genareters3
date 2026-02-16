@@ -63,9 +63,10 @@ export const load: PageServerLoad = async () => {
 
 			// Find incomplete months
 			const incompleteMonths: string[] = [];
+			const activeTotal = total - disposedCount; // จำนวนเครื่องที่ต้องตรวจ (ไม่รวมรอจำหน่าย)
 			for (let m = 1; m <= currentMonth; m++) {
 				const inspectedInMonth = monthMap.get(m) || 0;
-				if (inspectedInMonth < total) {
+				if (inspectedInMonth < activeTotal) {
 					incompleteMonths.push(getThaiMonthName(m));
 				}
 			}
@@ -109,9 +110,9 @@ export const load: PageServerLoad = async () => {
 					: 0;
 
 				if (kpiPercent >= 100) kpiScore = 5;
-				else if (kpiPercent >= 80) kpiScore = 4;
-				else if (kpiPercent >= 70) kpiScore = 3;
-				else if (kpiPercent >= 60) kpiScore = 2;
+				else if (kpiPercent >= 90) kpiScore = 4;
+				else if (kpiPercent >= 80) kpiScore = 3;
+				else if (kpiPercent >= 70) kpiScore = 2;
 				else kpiScore = 1;
 			}
 
@@ -151,9 +152,9 @@ export const load: PageServerLoad = async () => {
 			: 0;
 
 		if (overallKpiPercent >= 100) overallKpiScore = 5;
-		else if (overallKpiPercent >= 80) overallKpiScore = 4;
-		else if (overallKpiPercent >= 70) overallKpiScore = 3;
-		else if (overallKpiPercent >= 60) overallKpiScore = 2;
+		else if (overallKpiPercent >= 90) overallKpiScore = 4;
+		else if (overallKpiPercent >= 80) overallKpiScore = 3;
+		else if (overallKpiPercent >= 70) overallKpiScore = 2;
 		else overallKpiScore = 1;
 	}
 
@@ -262,11 +263,12 @@ export const load: PageServerLoad = async () => {
 			const months: { month: number; inspected: number; total: number; status: 'complete' | 'partial' | 'none' }[] = [];
 			for (let m = 1; m <= currentMonth; m++) {
 				const inspected = monthData.get(m) || 0;
+				const activeTotal = dept.total - dept.disposedCount;
 				months.push({
 					month: m,
 					inspected,
 					total: dept.total,
-					status: inspected >= dept.total ? 'complete' : inspected > 0 ? 'partial' : 'none'
+					status: inspected >= activeTotal ? 'complete' : inspected > 0 ? 'partial' : 'none'
 				});
 			}
 			return { id: dept.id, name: dept.name, total: dept.total, months };

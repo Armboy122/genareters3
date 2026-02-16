@@ -196,10 +196,10 @@
 		<div class="mb-6 flex flex-wrap gap-2 text-xs">
 			<span class="text-gray-500">เกณฑ์คะแนน:</span>
 			<span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">100% = 5 คะแนน</span>
-			<span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">80-99% = 4 คะแนน</span>
-			<span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">70-79% = 3 คะแนน</span>
-			<span class="px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200">60-69% = 2 คะแนน</span>
-			<span class="px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">&lt;60% = 1 คะแนน</span>
+			<span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200">90-99% = 4 คะแนน</span>
+			<span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">80-89% = 3 คะแนน</span>
+			<span class="px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200">70-79% = 2 คะแนน</span>
+			<span class="px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">&lt;70% = 1 คะแนน</span>
 		</div>
 
 		<!-- Tab Navigation -->
